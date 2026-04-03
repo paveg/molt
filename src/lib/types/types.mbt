@@ -1,11 +1,11 @@
 ///|
-pub enum TestMode {
+pub(all) enum TestMode {
   Duration(Int)
   RequestCount(Int)
 } derive(Show, Eq)
 
 ///|
-pub enum HttpMethod {
+pub(all) enum HttpMethod {
   Get
   Post
   Put
@@ -13,7 +13,7 @@ pub enum HttpMethod {
 } derive(Show, Eq)
 
 ///|
-pub struct Config {
+pub(all) struct Config {
   pub url : String
   pub connections : Int
   pub mode : TestMode

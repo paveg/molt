@@ -4,6 +4,9 @@ import {
   "paveg/molt/src/lib/coordinator",
   "paveg/molt/src/lib/reporter",
   "moonbitlang/async",
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/strconv",
+  "moonbitlang/core/env",
 }
 
 options(
