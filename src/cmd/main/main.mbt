@@ -8,6 +8,7 @@ async fn main {
   }
   println("molt v0.1.0 -- MoonBit HTTP Load Tester\n")
   println("Target:       \{config.url}")
+  println("Method:       \{config.method}")
   println("Connections:  \{config.connections}")
   match config.mode {
     @types.TestMode::Duration(ms) => println("Duration:     \{ms / 1000}s")
@@ -44,6 +45,26 @@ fn parse_args() -> @types.Config raise {
         short='n',
         long="requests",
         about="Total number of requests",
+      ),
+      @argparse.OptionArg(
+        "method",
+        short='m',
+        long="method",
+        about="HTTP method (GET, POST, PUT, DELETE)",
+        default_values=["GET"],
+      ),
+      @argparse.OptionArg(
+        "header",
+        short='H',
+        long="header",
+        about="Custom header (e.g. 'Content-Type: application/json')",
+        action=@argparse.Append,
+      ),
+      @argparse.OptionArg(
+        "body",
+        short='b',
+        long="body",
+        about="Request body string",
       ),
     ],
     positionals=[@argparse.PositionArg("url", about="Target URL")],
@@ -95,13 +116,51 @@ fn parse_args() -> @types.Config raise {
       }
     (None, None) => @types.TestMode::Duration(10000)
   }
+  // Parse HTTP method
+  let method_str = match matches.values.get("method") {
+    Some(vals) => if vals.length() > 0 { vals[0] } else { "GET" }
+    None => "GET"
+  }
+  let http_method = match method_str.to_upper() {
+    "GET" => @types.HttpMethod::Get
+    "POST" => @types.HttpMethod::Post
+    "PUT" => @types.HttpMethod::Put
+    "DELETE" => @types.HttpMethod::Delete
+    _ => @types.HttpMethod::Get
+  }
+  // Parse headers from -H "Key: Value" format
+  let header_vals = match matches.values.get("header") {
+    Some(vals) => vals
+    None => []
+  }
+  let headers : Array[(String, String)] = []
+  for h in header_vals {
+    // Find the first ": " separator
+    let mut colon_pos = -1
+    for i, c in h {
+      if c == ':' && i + 1 < h.length() && h[i + 1] == ' ' {
+        colon_pos = i
+        break
+      }
+    }
+    if colon_pos >= 0 {
+      let key = h[:colon_pos].to_string()
+      let value = h[colon_pos + 2:].to_string()
+      headers.push((key, value))
+    }
+  }
+  // Parse body
+  let body : String? = match matches.values.get("body") {
+    Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
+    None => None
+  }
   {
     url,
     connections,
     mode,
-    method: @types.HttpMethod::Get,
-    headers: [],
-    body: None,
+    method: http_method,
+    headers,
+    body,
     timeout_ms: 30000,
     enable_tui: false,
     json_output: false,

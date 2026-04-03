@@ -1,7 +1,7 @@
 ///|
 test "collect single successful result" {
   let c = @collector.Collector::new()
-  c.record({ status_code: 200, latency_us: 5000L, error: None })
+  c.record({ status_code: 200, latency_us: 5000L, error: None, scheduled_time_us: 0L })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="1")
   inspect(stats.successful, content="1")
@@ -12,10 +12,10 @@ test "collect single successful result" {
 test "collect mixed results" {
   let c = @collector.Collector::new()
   for _ in 0..<90 {
-    c.record({ status_code: 200, latency_us: 1000L, error: None })
+    c.record({ status_code: 200, latency_us: 1000L, error: None, scheduled_time_us: 0L })
   }
   for _ in 0..<10 {
-    c.record({ status_code: 500, latency_us: 5000L, error: None })
+    c.record({ status_code: 500, latency_us: 5000L, error: None, scheduled_time_us: 0L })
   }
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="100")
@@ -28,8 +28,8 @@ test "collect mixed results" {
 ///|
 test "collect error results" {
   let c = @collector.Collector::new()
-  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout) })
-  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::ConnectionRefused) })
+  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout), scheduled_time_us: 0L })
+  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::ConnectionRefused), scheduled_time_us: 0L })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="2")
   inspect(stats.failed, content="2")
@@ -39,7 +39,7 @@ test "collect error results" {
 test "latency stats are computed" {
   let c = @collector.Collector::new()
   for i in 1..=100 {
-    c.record({ status_code: 200, latency_us: (i * 100).to_int64(), error: None })
+    c.record({ status_code: 200, latency_us: (i * 100).to_int64(), error: None, scheduled_time_us: 0L })
   }
   let stats = c.finalize(1000.0)
   inspect(stats.latency.p50_us >= 4900L && stats.latency.p50_us <= 5100L, content="true")
@@ -50,7 +50,7 @@ test "latency stats are computed" {
 ///|
 test "finalize with zero time" {
   let c = @collector.Collector::new()
-  c.record({ status_code: 200, latency_us: 1000L, error: None })
+  c.record({ status_code: 200, latency_us: 1000L, error: None, scheduled_time_us: 0L })
   let stats = c.finalize(0.0)
   // RPS should be 0 when total_time is 0
   inspect(stats.requests_per_sec, content="0")
@@ -60,7 +60,7 @@ test "finalize with zero time" {
 test "all requests failed" {
   let c = @collector.Collector::new()
   for _ in 0..<5 {
-    c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout) })
+    c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout), scheduled_time_us: 0L })
   }
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="5")
@@ -71,7 +71,7 @@ test "all requests failed" {
 ///|
 test "zero latency successful request" {
   let c = @collector.Collector::new()
-  c.record({ status_code: 200, latency_us: 0L, error: None })
+  c.record({ status_code: 200, latency_us: 0L, error: None, scheduled_time_us: 0L })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="1")
   inspect(stats.successful, content="1")
@@ -81,9 +81,9 @@ test "zero latency successful request" {
 ///|
 test "multiple error types accumulated" {
   let c = @collector.Collector::new()
-  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout) })
-  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout) })
-  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::ConnectionReset) })
+  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout), scheduled_time_us: 0L })
+  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout), scheduled_time_us: 0L })
+  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::ConnectionReset), scheduled_time_us: 0L })
   let stats = c.finalize(1000.0)
   inspect(stats.failed, content="3")
 }

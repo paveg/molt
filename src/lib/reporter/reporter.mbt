@@ -29,6 +29,116 @@ fn format_time(ms : Double) -> String {
 }
 
 ///|
+fn format_double(v : Double) -> String {
+  let whole = v.to_int()
+  let frac = ((v - whole.to_double()).abs() * 100.0 + 0.5).to_int()
+  if frac >= 100 {
+    "\{whole + 1}.00"
+  } else {
+    let frac_str = if frac < 10 { "0\{frac}" } else { "\{frac}" }
+    "\{whole}.\{frac_str}"
+  }
+}
+
+///|
+fn method_to_string(method : @types.HttpMethod) -> String {
+  match method {
+    @types.HttpMethod::Get => "GET"
+    @types.HttpMethod::Post => "POST"
+    @types.HttpMethod::Put => "PUT"
+    @types.HttpMethod::Delete => "DELETE"
+  }
+}
+
+///|
+pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
+  let buf = StringBuilder::new()
+  buf.write_string("{\n")
+  // "config" section
+  buf.write_string("  \"config\": {\n")
+  buf.write_string("    \"url\": \"\{config.url}\",\n")
+  buf.write_string("    \"connections\": \{config.connections},\n")
+  let duration_sec = match config.mode {
+    @types.TestMode::Duration(ms) => ms.to_double() / 1000.0
+    @types.TestMode::RequestCount(_) => 0.0
+  }
+  buf.write_string(
+    "    \"duration_sec\": \{format_double(duration_sec)},\n",
+  )
+  buf.write_string(
+    "    \"method\": \"\{method_to_string(config.method)}\"\n",
+  )
+  buf.write_string("  },\n")
+  // "summary" section
+  buf.write_string("  \"summary\": {\n")
+  buf.write_string("    \"total_requests\": \{stats.total_requests},\n")
+  buf.write_string("    \"successful\": \{stats.successful},\n")
+  buf.write_string("    \"failed\": \{stats.failed},\n")
+  buf.write_string(
+    "    \"total_time_sec\": \{format_double(stats.total_time_ms / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"requests_per_sec\": \{format_double(stats.requests_per_sec)}\n",
+  )
+  buf.write_string("  },\n")
+  // "latency" section (convert us to ms)
+  let lat = stats.latency
+  buf.write_string("  \"latency\": {\n")
+  buf.write_string(
+    "    \"p50_ms\": \{format_double(lat.p50_us.to_double() / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"p75_ms\": \{format_double(lat.p75_us.to_double() / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"p90_ms\": \{format_double(lat.p90_us.to_double() / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"p95_ms\": \{format_double(lat.p95_us.to_double() / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"p99_ms\": \{format_double(lat.p99_us.to_double() / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"p99_9_ms\": \{format_double(lat.p99_9_us.to_double() / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"max_ms\": \{format_double(lat.max_us.to_double() / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"mean_ms\": \{format_double(lat.mean_us / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"stdev_ms\": \{format_double(lat.stdev_us / 1000.0)}\n",
+  )
+  buf.write_string("  },\n")
+  // "status_codes" section
+  buf.write_string("  \"status_codes\": {")
+  let mut first = true
+  for code, count in stats.status_codes {
+    if not(first) {
+      buf.write_string(",")
+    }
+    buf.write_string("\n    \"\{code}\": \{count}")
+    first = false
+  }
+  buf.write_string("\n  },\n")
+  // "errors" section
+  buf.write_string("  \"errors\": {")
+  first = true
+  for err_type, count in stats.errors {
+    if not(first) {
+      buf.write_string(",")
+    }
+    buf.write_string("\n    \"\{err_type}\": \{count}")
+    first = false
+  }
+  buf.write_string("\n  }\n")
+  buf.write_string("}")
+  buf.to_string()
+}
+
+///|
 pub fn report_text(stats : @types.Stats) -> String {
   let buf = StringBuilder::new()
   buf.write_string("Summary:\n")

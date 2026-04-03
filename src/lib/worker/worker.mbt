@@ -28,6 +28,15 @@ fn parse_url(url : String) -> (String, String) {
 }
 
 ///|
+fn build_headers(pairs : Array[(String, String)]) -> Map[String, String] {
+  let m : Map[String, String] = {}
+  for pair in pairs {
+    m[pair.0] = pair.1
+  }
+  m
+}
+
+///|
 pub async fn run(
   config : @types.Config,
   on_result : (@types.RequestResult) -> Unit,
@@ -35,16 +44,39 @@ pub async fn run(
 ) -> Unit {
   let (base_url, path) = parse_url(config.url)
   let client = @http.Client::new(base_url)
+  let headers = build_headers(config.headers)
   while not(should_stop()) {
     let start = @bench.monotonic_clock_start()
     try {
-      let response = client.get(path)
+      let response = match config.method {
+        @types.HttpMethod::Get =>
+          client.get(path, extra_headers=headers)
+        @types.HttpMethod::Post => {
+          let body_data : String = match config.body {
+            Some(b) => b
+            None => ""
+          }
+          client.post(path, body_data, extra_headers=headers)
+        }
+        @types.HttpMethod::Put => {
+          let body_data : String = match config.body {
+            Some(b) => b
+            None => ""
+          }
+          client.put(path, body_data, extra_headers=headers)
+        }
+        @types.HttpMethod::Delete => {
+          client.request(@http.Delete, path, extra_headers=headers)
+          client.end_request()
+        }
+      }
       let elapsed_us = @bench.monotonic_clock_end(start)
       on_result(
         {
           status_code: response.code,
           latency_us: elapsed_us.to_int64(),
           error: None,
+          scheduled_time_us: 0L,
         },
       )
       client.skip_response_body()
@@ -56,6 +88,7 @@ pub async fn run(
             status_code: 0,
             latency_us: elapsed_us.to_int64(),
             error: Some(@types.RequestError::Other("request failed")),
+            scheduled_time_us: 0L,
           },
         )
       }

@@ -109,3 +109,54 @@ test "report_text with no errors omits errors section" {
   inspect(output.contains("Errors"), content="false")
   inspect(output.contains("Successful:        100 (100.0%)"), content="true")
 }
+
+///|
+test "report_json contains config section" {
+  let config = @types.Config::default_with_url("https://example.com/api")
+  let stats = make_test_stats()
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"config\""), content="true")
+  inspect(
+    json.contains("\"url\": \"https://example.com/api\""),
+    content="true",
+  )
+  inspect(json.contains("\"connections\": 50"), content="true")
+}
+
+///|
+test "report_json contains summary section" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let stats = make_test_stats()
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"total_requests\": 1000"), content="true")
+  inspect(json.contains("\"successful\": 990"), content="true")
+  inspect(json.contains("\"failed\": 10"), content="true")
+}
+
+///|
+test "report_json contains latency in milliseconds" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let stats = make_test_stats()
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"p50_ms\""), content="true")
+  inspect(json.contains("\"p99_ms\""), content="true")
+  inspect(json.contains("\"mean_ms\""), content="true")
+}
+
+///|
+test "report_json contains status codes" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let stats = make_test_stats()
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"status_codes\""), content="true")
+  inspect(json.contains("\"200\""), content="true")
+}
+
+///|
+test "report_json contains errors" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let stats = make_test_stats()
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"errors\""), content="true")
+  inspect(json.contains("\"Timeout\""), content="true")
+}

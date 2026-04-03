@@ -57,6 +57,7 @@ pub(all) struct RequestResult {
   pub status_code : Int
   pub latency_us : Int64
   pub error : RequestError?
+  pub scheduled_time_us : Int64 // 0 when not using rate limiting
 } derive(Show)
 
 ///|
