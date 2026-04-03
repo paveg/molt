@@ -3,6 +3,7 @@ import {
   "paveg/molt/src/lib/worker",
   "paveg/molt/src/lib/collector",
   "moonbitlang/async",
+  "moonbitlang/core/bench",
 }
 
 options(
