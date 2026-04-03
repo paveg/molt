@@ -43,7 +43,7 @@ pub fn Config::default_with_url(url : String) -> Config {
 }
 
 ///|
-pub enum RequestError {
+pub(all) enum RequestError {
   Timeout
   ConnectionRefused
   ConnectionReset
@@ -53,14 +53,14 @@ pub enum RequestError {
 } derive(Show, Eq)
 
 ///|
-pub struct RequestResult {
+pub(all) struct RequestResult {
   pub status_code : Int
   pub latency_us : Int64
   pub error : RequestError?
 } derive(Show)
 
 ///|
-pub struct LatencyStats {
+pub(all) struct LatencyStats {
   pub p50_us : Int64
   pub p75_us : Int64
   pub p90_us : Int64
@@ -74,7 +74,7 @@ pub struct LatencyStats {
 } derive(Show)
 
 ///|
-pub struct Stats {
+pub(all) struct Stats {
   pub total_requests : Int
   pub successful : Int
   pub failed : Int
