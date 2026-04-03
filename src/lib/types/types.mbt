@@ -84,3 +84,33 @@ pub struct Stats {
   pub status_codes : Map[Int, Int]
   pub errors : Map[String, Int]
 } derive(Show)
+
+///|
+pub fn LatencyStats::new(
+  p50_us~ : Int64,
+  p75_us~ : Int64,
+  p90_us~ : Int64,
+  p95_us~ : Int64,
+  p99_us~ : Int64,
+  p99_9_us~ : Int64,
+  max_us~ : Int64,
+  min_us~ : Int64,
+  mean_us~ : Double,
+  stdev_us~ : Double
+) -> LatencyStats {
+  { p50_us, p75_us, p90_us, p95_us, p99_us, p99_9_us, max_us, min_us, mean_us, stdev_us }
+}
+
+///|
+pub fn Stats::new(
+  total_requests~ : Int,
+  successful~ : Int,
+  failed~ : Int,
+  total_time_ms~ : Double,
+  requests_per_sec~ : Double,
+  latency~ : LatencyStats,
+  status_codes~ : Map[Int, Int],
+  errors~ : Map[String, Int]
+) -> Stats {
+  { total_requests, successful, failed, total_time_ms, requests_per_sec, latency, status_codes, errors }
+}
