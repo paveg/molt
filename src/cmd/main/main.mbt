@@ -49,7 +49,9 @@ fn parse_args() -> @types.Config raise {
     positionals=[@argparse.PositionArg("url", about="Target URL")],
   )
   let argv = @env.args()
-  let matches = cmd.parse(argv=argv[:])
+  // argv[0] is the program name; argparse expects only the arguments
+  let args = if argv.length() > 1 { argv[1:] } else { [][:] }
+  let matches = cmd.parse(argv=args)
   let url_values = matches.values.get("url")
   guard url_values is Some(urls) && urls.length() > 0 else {
     raise Failure::Failure("URL is required")
