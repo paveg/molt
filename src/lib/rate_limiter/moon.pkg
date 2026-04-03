@@ -1,0 +1,11 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+}
+
+options(
+  targets: {
+    "rate_limiter.mbt": [ "native" ],
+    "rate_limiter_wbtest.mbt": [ "native" ],
+  },
+)
