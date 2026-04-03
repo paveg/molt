@@ -46,3 +46,54 @@ test "latency stats are computed" {
   inspect(stats.latency.min_us, content="100")
   inspect(stats.latency.max_us, content="10000")
 }
+
+///|
+test "finalize with zero time" {
+  let c = @collector.Collector::new()
+  c.record({ status_code: 200, latency_us: 1000L, error: None })
+  let stats = c.finalize(0.0)
+  // RPS should be 0 when total_time is 0
+  inspect(stats.requests_per_sec, content="0")
+}
+
+///|
+test "all requests failed" {
+  let c = @collector.Collector::new()
+  for _ in 0..<5 {
+    c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout) })
+  }
+  let stats = c.finalize(1000.0)
+  inspect(stats.total_requests, content="5")
+  inspect(stats.failed, content="5")
+  inspect(stats.successful, content="0")
+}
+
+///|
+test "zero latency successful request" {
+  let c = @collector.Collector::new()
+  c.record({ status_code: 200, latency_us: 0L, error: None })
+  let stats = c.finalize(1000.0)
+  inspect(stats.total_requests, content="1")
+  inspect(stats.successful, content="1")
+  inspect(stats.latency.min_us, content="0")
+}
+
+///|
+test "multiple error types accumulated" {
+  let c = @collector.Collector::new()
+  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout) })
+  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::Timeout) })
+  c.record({ status_code: 0, latency_us: 0L, error: Some(@types.RequestError::ConnectionReset) })
+  let stats = c.finalize(1000.0)
+  inspect(stats.failed, content="3")
+}
+
+///|
+test "empty collector finalize" {
+  let c = @collector.Collector::new()
+  let stats = c.finalize(1000.0)
+  inspect(stats.total_requests, content="0")
+  inspect(stats.successful, content="0")
+  inspect(stats.failed, content="0")
+  inspect(stats.requests_per_sec, content="0")
+}
