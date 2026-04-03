@@ -103,6 +103,25 @@ pub fn LatencyStats::new(
 }
 
 ///|
+/// Parses a header string in "Key: Value" format.
+/// Splits on the first ": " (colon followed by space).
+/// Returns None if the format is invalid.
+pub fn parse_header(h : String) -> (String, String)? {
+  let mut colon_pos = -1
+  for i, c in h {
+    if c == ':' && i + 1 < h.length() && h[i + 1] == ' ' {
+      colon_pos = i
+      break
+    }
+  }
+  if colon_pos >= 0 {
+    Some((h[:colon_pos].to_string(), h[colon_pos + 2:].to_string()))
+  } else {
+    None
+  }
+}
+
+///|
 pub fn Stats::new(
   total_requests~ : Int,
   successful~ : Int,

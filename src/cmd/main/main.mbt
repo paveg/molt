@@ -135,18 +135,9 @@ fn parse_args() -> @types.Config raise {
   }
   let headers : Array[(String, String)] = []
   for h in header_vals {
-    // Find the first ": " separator
-    let mut colon_pos = -1
-    for i, c in h {
-      if c == ':' && i + 1 < h.length() && h[i + 1] == ' ' {
-        colon_pos = i
-        break
-      }
-    }
-    if colon_pos >= 0 {
-      let key = h[:colon_pos].to_string()
-      let value = h[colon_pos + 2:].to_string()
-      headers.push((key, value))
+    match @types.parse_header(h) {
+      Some(pair) => headers.push(pair)
+      None => () // silently skip malformed headers
     }
   }
   // Parse body
