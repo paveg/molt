@@ -1,0 +1,12 @@
+import {
+  "paveg/molt/src/lib/types",
+  "paveg/molt/src/lib/worker",
+  "paveg/molt/src/lib/collector",
+  "moonbitlang/async",
+}
+
+options(
+  targets: {
+    "coordinator.mbt": [ "native" ],
+  },
+)

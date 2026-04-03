@@ -1,0 +1,1 @@
+// Worker implementation (native only)

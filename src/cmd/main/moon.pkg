@@ -1,0 +1,14 @@
+import {
+  "paveg/molt/src/lib/types",
+  "paveg/molt/src/lib/duration",
+  "paveg/molt/src/lib/coordinator",
+  "paveg/molt/src/lib/reporter",
+  "moonbitlang/async",
+}
+
+options(
+  "is-main": true,
+  targets: {
+    "main.mbt": [ "native" ],
+  },
+)
