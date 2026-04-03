@@ -67,3 +67,28 @@ test "parse_url/ip_address" {
   inspect(base, content="http://127.0.0.1:8080")
   inspect(path, content="/health")
 }
+
+///|
+test "build_headers empty array" {
+  let h = build_headers([])
+  inspect(h.length(), content="0")
+}
+
+///|
+test "build_headers single header" {
+  let h = build_headers([("Content-Type", "application/json")])
+  inspect(h.get("Content-Type"), content="Some(\"application/json\")")
+}
+
+///|
+test "build_headers multiple headers" {
+  let h = build_headers([("Content-Type", "application/json"), ("Authorization", "Bearer token")])
+  inspect(h.get("Content-Type"), content="Some(\"application/json\")")
+  inspect(h.get("Authorization"), content="Some(\"Bearer token\")")
+}
+
+///|
+test "build_headers duplicate key uses last value" {
+  let h = build_headers([("X-Key", "first"), ("X-Key", "second")])
+  inspect(h.get("X-Key"), content="Some(\"second\")")
+}
