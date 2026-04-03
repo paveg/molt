@@ -6,22 +6,22 @@
 
 ### Purpose
 
-MoonBit native backend で構築する oha/hey 路線のシンプル HTTP 負荷試験 CLI。
-MoonBit エコシステムへの実用ツール貢献 + 言語の async/networking 能力のショーケース。
+A simple HTTP load testing CLI in the vein of oha/hey, built with MoonBit native backend.
+Serves as both a practical tool contribution to the MoonBit ecosystem and a showcase of the language's async/networking capabilities.
 
 ### Design Principles
 
-- **Simple-first**: CLI ワンライナーで即使える。設定ファイル不要
-- **Accurate measurement**: Gil Tene HDR Histogram ベースのレイテンシ計測。Coordinated Omission 対策
-- **Readable output**: TUI リアルタイム表示 + 最終サマリ
-- **MoonBit native**: WASM 経由なし。`moonbitlang/async` で直接 I/O
+- **Simple-first**: Usable as a CLI one-liner with no config files required
+- **Accurate measurement**: Gil Tene HDR Histogram-based latency measurement with Coordinated Omission correction
+- **Readable output**: Real-time TUI display + final summary
+- **MoonBit native**: No WASM intermediary; direct I/O via `moonbitlang/async`
 
 ### Non-goals (v1)
 
-- シナリオベースの複雑なテスト (k6/Locust 領域)
-- 分散負荷生成
-- WASM プラグイン機構
-- gRPC / WebSocket 負荷 (HTTP/1.1 のみ)
+- Scenario-based complex testing (k6/Locust territory)
+- Distributed load generation
+- WASM plugin mechanism
+- gRPC / WebSocket load (HTTP/1.1 only)
 
 ## 2. CLI Interface
 
@@ -33,27 +33,27 @@ molt [options] <URL>
 
 | Option | Short | Default | Description |
 |---|---|---|---|
-| `--connections` | `-c` | 50 | 同時接続数 |
-| `--duration` | `-d` | 10s | テスト時間 (`10s`, `1m`, `30s` 等) |
-| `--requests` | `-n` | (none) | 総リクエスト数 (duration と排他) |
-| `--rate` | `-r` | (none) | 目標 RPS (未指定時は max throughput) |
-| `--method` | `-m` | GET | HTTP メソッド |
-| `--header` | `-H` | (none) | カスタムヘッダ (複数指定可) |
-| `--body` | `-b` | (none) | リクエストボディ (文字列) |
-| `--body-file` | `-B` | (none) | リクエストボディ (ファイルパス) |
-| `--timeout` | `-t` | 30s | リクエストタイムアウト |
-| `--no-tui` | | false | TUI を無効化しプレーン出力 |
-| `--json` | `-j` | false | 結果を JSON で出力 |
-| `--latency-correction` | | true | Coordinated Omission 補正 |
-| `--http2` | | false | HTTP/2 を使用 (将来対応) |
+| `--connections` | `-c` | 50 | Number of concurrent connections |
+| `--duration` | `-d` | 10s | Test duration (`10s`, `1m`, `30s`, etc.) |
+| `--requests` | `-n` | (none) | Total request count (mutually exclusive with duration) |
+| `--rate` | `-r` | (none) | Target RPS (unlimited when unspecified) |
+| `--method` | `-m` | GET | HTTP method |
+| `--header` | `-H` | (none) | Custom header (can be specified multiple times) |
+| `--body` | `-b` | (none) | Request body (string) |
+| `--body-file` | `-B` | (none) | Request body (file path) |
+| `--timeout` | `-t` | 30s | Per-request timeout |
+| `--no-tui` | | false | Disable TUI, use plain output |
+| `--json` | `-j` | false | Output results as JSON |
+| `--latency-correction` | | true | Coordinated Omission correction |
+| `--http2` | | false | Use HTTP/2 (future support) |
 
 ### Validation Rules
 
-- `--duration` と `--requests` は排他。両方指定でエラー
-- `--duration` 未指定 & `--requests` 未指定時はデフォルト `--duration 10s`
-- `--body` と `--body-file` は排他
-- `--rate` は正の整数のみ
-- `--connections` は正の整数のみ
+- `--duration` and `--requests` are mutually exclusive; specifying both is an error
+- When neither `--duration` nor `--requests` is specified, defaults to `--duration 10s`
+- `--body` and `--body-file` are mutually exclusive
+- `--rate` must be a positive integer
+- `--connections` must be a positive integer
 
 ## 3. Architecture
 
@@ -124,7 +124,7 @@ CLI args
 
 | Package | Source | Purpose |
 |---|---|---|
-| `moonbitlang/async` | registry | async runtime, TaskGroup, Queue, sleep, Semaphore |
+| `moonbitlang/async` | registry | Async runtime, TaskGroup, Queue, sleep, Semaphore |
 | `moonbitlang/async/http` | registry | HTTP client (Client API) |
 | `mizchi/tui` | registry | TUI framework |
 | `@argparse` | core lib | CLI argument parsing |
@@ -386,8 +386,6 @@ If the server closes the connection (e.g., `Connection: close`, TCP reset), the 
 
 ### Text Output (default)
 
-Follows the format in the original spec:
-
 ```
 molt v0.1.0 -- MoonBit HTTP Load Tester
 
@@ -419,19 +417,19 @@ Errors:
 
 ### JSON Output (--json)
 
-`Stats` struct serialized to JSON via `@json` standard library. Schema matches the spec.
+`Stats` struct serialized to JSON via `@json` standard library. Schema matches the original spec.
 
 ## 10. TUI (mizchi/tui)
 
 ### Display
 
 - Update interval: 500ms
-- Items: elapsed/remaining time, current RPS, p50/p99 live, request count, error count, progress bar
-- `mizchi/tui` framework for rendering. Fall back to ANSI escape sequences if API is insufficient.
+- Items: elapsed/remaining time, current RPS, p50/p99 live update, request count, error count, progress bar
+- Uses `mizchi/tui` framework for rendering. Falls back to ANSI escape sequences if the framework's API is insufficient.
 
 ### --no-tui Mode
 
-Print 1-line summary to stdout every 1 second:
+Prints a 1-line summary to stdout every 1 second:
 
 ```
 [5.0s] 2,500 requests | 500.0 req/s | p50: 12ms | p99: 67ms | errors: 2
