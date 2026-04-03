@@ -31,3 +31,50 @@ test "request result with zero scheduled time" {
   }
   inspect(r.scheduled_time_us, content="0")
 }
+
+///|
+test "parse_header standard header" {
+  inspect(
+    @types.parse_header("Content-Type: application/json"),
+    content="Some((\"Content-Type\", \"application/json\"))",
+  )
+}
+
+///|
+test "parse_header no space after colon returns None" {
+  inspect(@types.parse_header("Key:Value"), content="None")
+}
+
+///|
+test "parse_header empty value after colon-space" {
+  inspect(
+    @types.parse_header("X-Empty: "),
+    content="Some((\"X-Empty\", \"\"))",
+  )
+}
+
+///|
+test "parse_header colon in value splits on first occurrence" {
+  inspect(
+    @types.parse_header("Authorization: Bearer: token"),
+    content="Some((\"Authorization\", \"Bearer: token\"))",
+  )
+}
+
+///|
+test "parse_header no colon returns None" {
+  inspect(@types.parse_header("InvalidHeader"), content="None")
+}
+
+///|
+test "parse_header empty string returns None" {
+  inspect(@types.parse_header(""), content="None")
+}
+
+///|
+test "parse_header only colon-space prefix yields empty key" {
+  inspect(
+    @types.parse_header(": value"),
+    content="Some((\"\", \"value\"))",
+  )
+}
