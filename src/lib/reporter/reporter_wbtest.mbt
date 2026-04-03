@@ -102,3 +102,43 @@ test "format_time 60000ms" {
 test "format_time 100ms" {
   inspect(format_time(100.0), content="0.10s")
 }
+
+///|
+test "format_double zero" {
+  inspect(format_double(0.0), content="0.00")
+}
+
+///|
+test "format_double whole number" {
+  inspect(format_double(5.0), content="5.00")
+}
+
+///|
+test "format_double rounds up" {
+  // 1.999 → frac = ((0.999)*100+0.5).to_int() = 100 → triggers whole+1
+  inspect(format_double(1.999), content="2.00")
+}
+
+///|
+test "format_double small fraction" {
+  inspect(format_double(0.01), content="0.01")
+}
+
+///|
+test "format_double negative" {
+  // Check behavior with negative values (latency can't be negative, but test the edge)
+  inspect(format_double(-1.5), content="-1.50")
+}
+
+///|
+test "format_double large value" {
+  inspect(format_double(99999.99), content="99999.99")
+}
+
+///|
+test "method_to_string all variants" {
+  inspect(method_to_string(@types.HttpMethod::Get), content="GET")
+  inspect(method_to_string(@types.HttpMethod::Post), content="POST")
+  inspect(method_to_string(@types.HttpMethod::Put), content="PUT")
+  inspect(method_to_string(@types.HttpMethod::Delete), content="DELETE")
+}

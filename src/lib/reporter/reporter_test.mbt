@@ -160,3 +160,43 @@ test "report_json contains errors" {
   inspect(json.contains("\"errors\""), content="true")
   inspect(json.contains("\"Timeout\""), content="true")
 }
+
+///|
+test "report_json with RequestCount mode" {
+  let config : @types.Config = {
+    url: "https://example.com",
+    connections: 10,
+    mode: @types.TestMode::RequestCount(5000),
+    method: @types.HttpMethod::Post,
+    headers: [],
+    body: Some("{\"key\":\"value\"}"),
+    timeout_ms: 30000,
+    enable_tui: false,
+    json_output: true,
+    latency_correction: true,
+  }
+  let stats = make_test_stats()
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"method\": \"POST\""), content="true")
+  inspect(json.contains("\"duration_sec\": 0.00"), content="true")
+  inspect(json.contains("\"connections\": 10"), content="true")
+}
+
+///|
+test "report_json with empty status codes" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let stats : @types.Stats = {
+    total_requests: 0,
+    successful: 0,
+    failed: 0,
+    total_time_ms: 0.0,
+    requests_per_sec: 0.0,
+    latency: { p50_us: 0L, p75_us: 0L, p90_us: 0L, p95_us: 0L, p99_us: 0L, p99_9_us: 0L, max_us: 0L, min_us: 0L, mean_us: 0.0, stdev_us: 0.0 },
+    status_codes: {},
+    errors: {},
+  }
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"status_codes\": {"), content="true")
+  inspect(json.contains("\"errors\": {"), content="true")
+  inspect(json.contains("\"total_requests\": 0"), content="true")
+}
