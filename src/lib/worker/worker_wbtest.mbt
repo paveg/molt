@@ -92,3 +92,57 @@ test "build_headers duplicate key uses last value" {
   let h = build_headers([("X-Key", "first"), ("X-Key", "second")])
   inspect(h.get("X-Key"), content="Some(\"second\")")
 }
+
+///|
+test "classify_error/timeout" {
+  let err = classify_error("connection timeout exceeded")
+  inspect(err, content="Timeout")
+}
+
+///|
+test "classify_error/Timeout_uppercase" {
+  let err = classify_error("Request Timeout")
+  inspect(err, content="Timeout")
+}
+
+///|
+test "classify_error/connection_refused" {
+  let err = classify_error("connection refused")
+  inspect(err, content="ConnectionRefused")
+}
+
+///|
+test "classify_error/connection_reset" {
+  let err = classify_error("connection reset by peer")
+  inspect(err, content="ConnectionReset")
+}
+
+///|
+test "classify_error/dns_error" {
+  let err = classify_error("DNS resolution failed")
+  inspect(err, content="DnsError")
+}
+
+///|
+test "classify_error/dns_resolve" {
+  let err = classify_error("failed to resolve hostname")
+  inspect(err, content="DnsError")
+}
+
+///|
+test "classify_error/tls_error" {
+  let err = classify_error("TLS handshake failed")
+  inspect(err, content="TlsError")
+}
+
+///|
+test "classify_error/ssl_error" {
+  let err = classify_error("SSL certificate error")
+  inspect(err, content="TlsError")
+}
+
+///|
+test "classify_error/other" {
+  let err = classify_error("some unknown error")
+  inspect(err, content="Other(\"some unknown error\")")
+}
