@@ -4,6 +4,7 @@ import {
 }
 
 options(
+  "supported-targets": "native",
   targets: {
     "rate_limiter.mbt": [ "native" ],
     "rate_limiter_wbtest.mbt": [ "native" ],
