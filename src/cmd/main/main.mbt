@@ -308,7 +308,9 @@ fn parse_args() -> @types.Config raise {
   let url = match get_option_value_opt(matches, "url") {
     Some(u) => u
     None =>
-      if serve_addr is Some(_) { "" } else {
+      if serve_addr is Some(_) {
+        ""
+      } else {
         raise Failure::Failure("URL is required")
       }
   }
