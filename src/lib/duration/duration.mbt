@@ -22,12 +22,17 @@ pub fn parse(input : String) -> Int raise {
           _ =>
             raise InvalidDuration("invalid number \"\{num_str}\" in \"\{input}\"")
         }
-        match c {
-          'h' => total_ms = total_ms + n * 3600000
-          'm' => total_ms = total_ms + n * 60000
-          's' => total_ms = total_ms + n * 1000
-          _ => ()
+        let multiplier = match c {
+          'h' => 3600000
+          'm' => 60000
+          's' => 1000
+          _ => 0
         }
+        let product = n * multiplier
+        if multiplier != 0 && product / multiplier != n {
+          raise InvalidDuration("duration value too large in \"\{input}\"")
+        }
+        total_ms = total_ms + product
         num_start = i + 1
         has_unit = true
       }

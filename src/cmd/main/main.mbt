@@ -141,6 +141,9 @@ fn parse_args() -> @types.Config raise {
   } catch {
     _ => 50
   }
+  if connections <= 0 {
+    raise Failure::Failure("--connections must be a positive integer")
+  }
   let duration_val = matches.values.get("duration")
   let requests_val = matches.values.get("requests")
   let mode : @types.TestMode = match (duration_val, requests_val) {
@@ -232,6 +235,13 @@ fn parse_args() -> @types.Config raise {
         None
       }
     None => None
+  }
+  match rate {
+    Some(r) =>
+      if r <= 0 {
+        raise Failure::Failure("--rate must be a positive integer")
+      }
+    None => ()
   }
   // Parse timeout
   let timeout_str = match matches.values.get("timeout") {

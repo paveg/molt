@@ -13,7 +13,10 @@ pub fn RateLimiter::new(rate : Int) -> RateLimiter {
 /// Start the token filler task. Must be called inside a TaskGroup.
 /// Emits `rate` tokens per second at uniform intervals.
 pub fn RateLimiter::start(self : RateLimiter, group : @async.TaskGroup[Unit]) -> Unit {
-  let interval_ms = 1000 / self.rate
+  if self.rate <= 0 {
+    return
+  }
+  let interval_ms = if 1000 / self.rate < 1 { 1 } else { 1000 / self.rate }
   group.spawn_bg(async fn() {
     while true {
       self.queue.put(())

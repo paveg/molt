@@ -56,3 +56,9 @@ test "missing number raises" {
   let r = try { Ok(parse("s")) } catch { e => Err(e) }
   inspect(r is Err(_), content="true")
 }
+
+///|
+test "overflow hours raises" {
+  let r = try { Ok(parse("999999h")) } catch { e => Err(e) }
+  inspect(r is Err(_), content="true")
+}

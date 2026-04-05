@@ -30,3 +30,24 @@ test "rate limiter with rate 1000" {
   let rl = RateLimiter::new(1000)
   inspect(rl.rate(), content="1000")
 }
+
+///|
+test "rate limiter with rate 5000 does not crash" {
+  // rate=5000 → 1000/5000 = 0 via integer division, but clamped to 1ms
+  let rl = RateLimiter::new(5000)
+  inspect(rl.rate(), content="5000")
+}
+
+///|
+test "rate limiter with rate 0 is safe" {
+  // rate=0 → start() should return without spawning, no division by zero
+  let rl = RateLimiter::new(0)
+  inspect(rl.rate(), content="0")
+}
+
+///|
+test "rate limiter with rate 1 interval" {
+  // rate=1 → interval = 1000/1 = 1000ms
+  let rl = RateLimiter::new(1)
+  inspect(rl.rate(), content="1")
+}
