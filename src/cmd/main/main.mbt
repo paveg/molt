@@ -304,9 +304,13 @@ fn parse_args() -> @types.Config raise {
   // argv[0] is the program name; argparse expects only the arguments
   let args = if argv.length() > 1 { argv[1:] } else { [][:] }
   let matches = cmd.parse(argv=args)
+  let serve_addr = get_option_value_opt(matches, "serve")
   let url = match get_option_value_opt(matches, "url") {
     Some(u) => u
-    None => raise Failure::Failure("URL is required")
+    None =>
+      if serve_addr is Some(_) { "" } else {
+        raise Failure::Failure("URL is required")
+      }
   }
   let conn_str = get_option_value(matches, "connections", "50")
   let connections = @strconv.parse_int(conn_str) catch { _ => 50 }
@@ -440,7 +444,6 @@ fn parse_args() -> @types.Config raise {
   let csv_output = get_flag(matches, "csv")
   let redirect = get_flag(matches, "redirect")
   let max_redirects = if redirect { 10 } else { 0 }
-  let serve_addr = get_option_value_opt(matches, "serve")
   if csv_output && json_output {
     raise Failure::Failure("Cannot specify both --csv and --json")
   }
