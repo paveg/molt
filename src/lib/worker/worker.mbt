@@ -73,11 +73,8 @@ fn compute_corrected_latency(
   actual_start_us~ : Int64,
 ) -> Int64 {
   let delay = actual_start_us - scheduled_us
-  if delay > 0L {
-    elapsed_us + delay
-  } else {
-    elapsed_us
-  }
+  let corrected = if delay > 0L { elapsed_us + delay } else { elapsed_us }
+  if corrected < 0L { 0L } else { corrected }
 }
 
 ///|
@@ -90,7 +87,7 @@ pub async fn run(
   num_workers~ : Int = 1,
 ) -> Unit {
   let (base_url, path) = parse_url(config.url)
-  let client = @http.Client::new(base_url)
+  let mut client = @http.Client::new(base_url)
   let headers = build_headers(config.headers)
   let epoch_us = @bench.monotonic_clock_end(@bench.monotonic_clock_start()).to_int64()
   let use_co = config.latency_correction && rate_limiter is Some(_)
@@ -165,6 +162,9 @@ pub async fn run(
         on_result(
           { status_code: 0, latency_us: raw_elapsed, error: Some(error_type), scheduled_time_us: scheduled_us },
         )
+        // Reconnect: the client may be in a broken state after an error
+        client.close()
+        client = @http.Client::new(base_url)
       }
     }
     request_index = request_index + 1

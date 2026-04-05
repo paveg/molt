@@ -154,6 +154,15 @@ test "compute_corrected_latency early send" {
 }
 
 ///|
+test "compute_corrected_latency clamps negative to zero" {
+  // Edge case: if elapsed_us is somehow negative (clock issue)
+  let corrected = compute_corrected_latency(
+    elapsed_us=-100L, scheduled_us=1000L, actual_start_us=900L,
+  )
+  inspect(corrected >= 0L, content="true")
+}
+
+///|
 test "classify_error/timeout" {
   let err = classify_error("connection timeout exceeded")
   inspect(err, content="Timeout")
