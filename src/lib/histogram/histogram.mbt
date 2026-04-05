@@ -64,13 +64,10 @@ pub fn Histogram::new(
   } else {
     significant_figures
   }
-  let largest_value_with_single_unit_resolution = 2L * power_of_2(
-      @math.ceil(sig_figs.to_double() / @math.log10(2.0)).to_int(),
-    )
-  let sub_bucket_count_magnitude = (
-    @math.ceil(
-      @math.log2(largest_value_with_single_unit_resolution.to_double()),
-    )
+  let largest_value_with_single_unit_resolution = 2L *
+    power_of_2(@math.ceil(sig_figs.to_double() / @math.log10(2.0)).to_int())
+  let sub_bucket_count_magnitude = @math.ceil(
+    @math.log2(largest_value_with_single_unit_resolution.to_double()),
   ).to_int()
   let sub_bucket_half_count_magnitude = if sub_bucket_count_magnitude > 1 {
     sub_bucket_count_magnitude - 1
@@ -183,7 +180,11 @@ pub fn Histogram::percentile(self : Histogram, p : Double) -> Int64 {
       }
     }
   }
-  if found { result } else { self.max_value }
+  if found {
+    result
+  } else {
+    self.max_value
+  }
 }
 
 ///|
@@ -197,7 +198,11 @@ pub fn Histogram::stdev(self : Histogram) -> Double {
   guard self.total_count > 1L else { return 0.0 }
   let n = self.total_count.to_double()
   let variance = (self.sum_of_squares - self.sum * self.sum / n) / (n - 1.0)
-  if variance < 0.0 { 0.0 } else { variance.sqrt() }
+  if variance < 0.0 {
+    0.0
+  } else {
+    variance.sqrt()
+  }
 }
 
 ///|

@@ -262,7 +262,11 @@ test "classify_error/other" {
 ///|
 test "compute_scheduled_time rate zero returns epoch" {
   let scheduled = compute_scheduled_time(
-    epoch_us=1000000L, request_index=1, rate=0, worker_id=0, num_workers=2,
+    epoch_us=1000000L,
+    request_index=1,
+    rate=0,
+    worker_id=0,
+    num_workers=2,
   )
   inspect(scheduled, content="1000000")
 }
@@ -270,7 +274,11 @@ test "compute_scheduled_time rate zero returns epoch" {
 ///|
 test "compute_scheduled_time num_workers zero returns epoch" {
   let scheduled = compute_scheduled_time(
-    epoch_us=1000000L, request_index=1, rate=100, worker_id=0, num_workers=0,
+    epoch_us=1000000L,
+    request_index=1,
+    rate=100,
+    worker_id=0,
+    num_workers=0,
   )
   inspect(scheduled, content="1000000")
 }
@@ -278,7 +286,11 @@ test "compute_scheduled_time num_workers zero returns epoch" {
 ///|
 test "compute_scheduled_time negative rate returns epoch" {
   let scheduled = compute_scheduled_time(
-    epoch_us=1000000L, request_index=1, rate=-10, worker_id=0, num_workers=2,
+    epoch_us=1000000L,
+    request_index=1,
+    rate=-10,
+    worker_id=0,
+    num_workers=2,
   )
   inspect(scheduled, content="1000000")
 }
