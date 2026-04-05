@@ -49,6 +49,16 @@ pub fn Collector::total_requests(self : Collector) -> Int {
 }
 
 ///|
+pub fn Collector::failed_count(self : Collector) -> Int {
+  self.failed
+}
+
+///|
+pub fn Collector::live_percentile(self : Collector, p : Double) -> Int64 {
+  self.histogram.percentile(p)
+}
+
+///|
 pub fn Collector::finalize(self : Collector, total_time_ms : Double) -> @types.Stats {
   let successful = self.total_requests - self.failed
   let rps = if total_time_ms > 0.0 {

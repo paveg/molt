@@ -6,18 +6,45 @@ async fn main {
       return
     }
   }
-  println("molt v0.1.0 -- MoonBit HTTP Load Tester\n")
-  println("Target:       \{config.url}")
-  println("Method:       \{config.method}")
-  println("Connections:  \{config.connections}")
-  match config.mode {
-    @types.TestMode::Duration(ms) => println("Duration:     \{ms / 1000}s")
-    @types.TestMode::RequestCount(n) => println("Requests:     \{n}")
+  if not(config.json_output) && not(config.enable_tui) {
+    println("molt v0.1.0 -- MoonBit HTTP Load Tester\n")
+    println("Target:       \{config.url}")
+    println("Method:       \{config.method}")
+    println("Connections:  \{config.connections}")
+    match config.mode {
+      @types.TestMode::Duration(ms) => println("Duration:     \{ms / 1000}s")
+      @types.TestMode::RequestCount(n) => println("Requests:     \{n}")
+    }
+    println("\nRunning...\n")
   }
-  println("\nRunning...\n")
-  let stats = @coordinator.run(config)
-  let report = @reporter.report_text(stats)
-  println(report)
+  // Set up TUI callbacks
+  let tui_callbacks : @coordinator.TuiCallbacks? = if config.enable_tui {
+    let (width, height) = @io.get_terminal_size()
+    let app = @vnode.VNodeApp::new(width, height)
+    Some({
+      on_init: fn() { @io.print_raw(@vnode.VNodeApp::init_terminal()) },
+      on_update: fn(state) {
+        let node = @tui.render_tui_node(state)
+        @io.print_raw(app.render(node))
+      },
+      on_cleanup: fn() { @io.print_raw(@vnode.VNodeApp::restore_terminal()) },
+    })
+  } else if not(config.json_output) {
+    // Plain mode: print one-line status
+    Some({
+      on_init: fn() {  },
+      on_update: fn(state) { println(@tui.format_plain_status(state)) },
+      on_cleanup: fn() {  },
+    })
+  } else {
+    None
+  }
+  let stats = @coordinator.run(config, tui_callbacks=tui_callbacks)
+  if config.json_output {
+    println(@reporter.report_json(config, stats))
+  } else {
+    println(@reporter.report_text(stats))
+  }
 }
 
 ///|
@@ -66,6 +93,10 @@ fn parse_args() -> @types.Config raise {
         long="body",
         about="Request body string",
       ),
+    ],
+    flags=[
+      @argparse.FlagArg("no-tui", long="no-tui", about="Disable TUI, use plain output"),
+      @argparse.FlagArg("json", short='j', long="json", about="Output results as JSON"),
     ],
     positionals=[@argparse.PositionArg("url", about="Target URL")],
   )
@@ -145,6 +176,15 @@ fn parse_args() -> @types.Config raise {
     Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
     None => None
   }
+  // Parse flags
+  let no_tui = match matches.flags.get("no-tui") {
+    Some(v) => v
+    None => false
+  }
+  let json_output = match matches.flags.get("json") {
+    Some(v) => v
+    None => false
+  }
   {
     url,
     connections,
@@ -153,8 +193,8 @@ fn parse_args() -> @types.Config raise {
     headers,
     body,
     timeout_ms: 30000,
-    enable_tui: false,
-    json_output: false,
+    enable_tui: not(no_tui) && not(json_output),
+    json_output,
     latency_correction: true,
   }
 }

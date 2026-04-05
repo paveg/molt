@@ -3,6 +3,9 @@ import {
   "paveg/molt/src/lib/duration",
   "paveg/molt/src/lib/coordinator",
   "paveg/molt/src/lib/reporter",
+  "paveg/molt/src/lib/tui",
+  "mizchi/tui/vnode",
+  "mizchi/tui/io",
   "moonbitlang/async",
   "moonbitlang/core/argparse",
   "moonbitlang/core/strconv",
@@ -11,6 +14,7 @@ import {
 
 options(
   "is-main": true,
+  link: { "native": { "cc-link-flags": ".mooncakes/mizchi/tui/src/io/tui_native.c" } },
   targets: {
     "main.mbt": [ "native" ],
   },

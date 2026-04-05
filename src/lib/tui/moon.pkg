@@ -1,15 +1,16 @@
 import {
   "paveg/molt/src/lib/types",
-  "paveg/molt/src/lib/worker",
   "paveg/molt/src/lib/collector",
-  "paveg/molt/src/lib/rate_limiter",
-  "paveg/molt/src/lib/tui",
+  "mizchi/tui/vnode",
+  "mizchi/tui/components",
   "moonbitlang/async",
   "moonbitlang/core/bench",
 }
 
 options(
   targets: {
-    "coordinator.mbt": [ "native" ],
+    "tui.mbt": [ "native" ],
+    "tui_wbtest.mbt": [ "native" ],
+    "tui_test.mbt": [ "native" ],
   },
 )
