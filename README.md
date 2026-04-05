@@ -35,9 +35,9 @@ A lightweight, fast HTTP load testing tool inspired by [oha](https://github.com/
 
 ## Installation
 
-### Pre-built binary (recommended)
+### Pre-built binary
 
-Download from [GitHub Releases](https://github.com/paveg/molt/releases):
+Download from [GitHub Releases](https://github.com/paveg/molt/releases) (when available):
 
 ```sh
 # macOS (Apple Silicon)
@@ -49,7 +49,7 @@ curl -sL https://github.com/paveg/molt/releases/latest/download/molt-linux-amd64
 sudo mv molt /usr/local/bin/
 ```
 
-### Build from source
+### Build from source (recommended)
 
 Requires [MoonBit](https://www.moonbitlang.com/) toolchain.
 
@@ -132,39 +132,43 @@ molt --no-tui -c 10 -d 10s http://localhost:8080/
 ```
 molt v0.1.0 -- MoonBit HTTP Load Tester
 
-Target:       http://localhost:8080/api/health
+Target:       http://127.0.0.1:9998/
 Method:       Get
-Connections:  10
-Duration:     5s
+Connections:  5
+Duration:     3s
 
 Running...
 
-[1.0s] 2500 requests | 2500 req/s | p50: 1.16ms | p99: 15.32ms | errors: 0
-[2.0s] 5100 requests | 2550 req/s | p50: 1.15ms | p99: 15.14ms | errors: 0
-[3.0s] 7800 requests | 2600 req/s | p50: 1.15ms | p99: 15.03ms | errors: 0
-[4.0s] 10300 requests | 2575 req/s | p50: 1.15ms | p99: 15.24ms | errors: 0
+[0.9s] 20118 requests | 20118 req/s | p50: 0.19ms | p99: 1.05ms | errors: 0
+[1.9s] 40996 requests | 20498 req/s | p50: 0.18ms | p99: 1.16ms | errors: 0
 
 Summary:
-  Total requests:    13017
-  Successful:        13017 (100.0%)
+  Total requests:    57727
+  Successful:        57727 (100.0%)
   Failed:            0 (0.0%)
-  Total time:        5.0s
-  Requests/sec:      2601.45
+  Total time:        3.0s
+  Requests/sec:      19240.57
 
 Latency Distribution:
-  p50     1.16ms
-  p75     1.35ms
-  p90     1.94ms
-  p95     9.16ms
-  p99     15.15ms
-  p99.9   17.29ms
-  max     24.35ms
+  p50.00  0.20ms
+  p75.00  0.30ms
+  p90.00  0.39ms
+  p95.00  0.48ms
+  p99.00  1.21ms
+  p99.90  4.35ms
+  max     12.56ms
 
-  mean    1.91ms
-  stdev   2.82ms
+  mean    0.25ms
+  stdev   0.31ms
+
+TTFB (Time to First Byte):
+  p50     0.19ms
+  p99     1.20ms
+  max     12.56ms
+  mean    0.25ms
 
 Status Codes:
-  200: 13017
+  200: 57727
 ```
 
 ### JSON mode (`--json`)
@@ -172,33 +176,37 @@ Status Codes:
 ```json
 {
   "config": {
-    "url": "http://localhost:8080/api/health",
-    "connections": 10,
-    "duration_sec": 5.00,
+    "url": "http://127.0.0.1:9998/",
+    "connections": 2,
+    "duration_sec": 1.00,
+    "rate_rps": null,
+    "timeout_ms": 30000,
     "method": "GET"
   },
   "summary": {
-    "total_requests": 13017,
-    "successful": 13017,
+    "total_requests": 19155,
+    "successful": 19155,
     "failed": 0,
-    "total_time_sec": 5.00,
-    "requests_per_sec": 2601.45
+    "total_time_sec": 1.00,
+    "requests_per_sec": 19162.76
   },
   "latency": {
-    "p50_ms": 1.16,
-    "p75_ms": 1.35,
-    "p90_ms": 1.94,
-    "p95_ms": 9.16,
-    "p99_ms": 15.15,
-    "p99_9_ms": 17.29,
-    "max_ms": 24.35,
-    "mean_ms": 1.91,
-    "stdev_ms": 2.82
+    "p50_ms": 0.09, "p75_ms": 0.10, "p90_ms": 0.13,
+    "p95_ms": 0.18, "p99_ms": 0.31, "p99_9_ms": 0.77,
+    "max_ms": 2.05, "min_ms": 0.06, "mean_ms": 0.10, "stdev_ms": 0.06
   },
-  "status_codes": {
-    "200": 13017
+  "ttfb": {
+    "p50_ms": 0.09, "p75_ms": 0.09, "p90_ms": 0.12,
+    "p95_ms": 0.17, "p99_ms": 0.30, "p99_9_ms": 0.77,
+    "max_ms": 2.04, "min_ms": 0.06, "mean_ms": 0.10, "stdev_ms": 0.06
   },
-  "errors": {}
+  "status_codes": { "200": 19155 },
+  "errors": {},
+  "custom_percentiles": { "p50.00_ms": 0.09, "p99.00_ms": 0.31 },
+  "throughput": { "total_bytes": 0, "bytes_per_sec": 0.00 },
+  "time_series": [
+    { "elapsed_sec": 1.00, "requests": 19155, "rps": 19155.0, "p50_us": 91, "p99_us": 311, "errors": 0 }
+  ]
 }
 ```
 
@@ -224,7 +232,7 @@ Usage: molt [options] <url>
 | `--warm-up` | | -- | Exclude initial period from stats (e.g. `3s`) |
 | `--percentiles` | | `50,75,90,95,99,99.9` | Custom percentiles (comma-separated) |
 | `--auth` | | -- | Basic auth credentials (`user:password`) |
-| `--insecure` | `-k` | off | Skip TLS certificate verification |
+| `--insecure` | `-k` | off | Skip TLS certificate verification (pending [upstream](https://github.com/moonbitlang/async/issues/329)) |
 | `--disable-keepalive` | | off | New connection per request |
 | `--redirect` | `-L` | off | Follow 3xx redirects (up to 10 hops) |
 | `--debug` | | off | Send single request, print response, exit |
@@ -283,6 +291,7 @@ Usage: molt [options] <url>
 | `lib/tui` | Real-time TUI state management and VNode rendering |
 | `lib/duration` | Duration string parser (`"10s"`, `"1m30s"` -> ms) |
 | `lib/rate_limiter` | Token bucket rate limiter for `--rate` mode |
+| `lib/threshold` | SLA threshold checking for `--latency-threshold` / `--error-threshold` |
 
 ## How It Works
 
@@ -300,16 +309,8 @@ Usage: molt [options] <url>
 # Build native binary
 moon build --target native
 
-# Run all tests (119 tests)
-moon test --target native \
-  --package paveg/molt/src/lib/types \
-  --package paveg/molt/src/lib/duration \
-  --package paveg/molt/src/lib/histogram \
-  --package paveg/molt/src/lib/collector \
-  --package paveg/molt/src/lib/reporter \
-  --package paveg/molt/src/lib/worker \
-  --package paveg/molt/src/lib/rate_limiter \
-  --package paveg/molt/src/lib/tui
+# Run all tests (231 tests)
+moon test --target native
 
 # Format code
 moon fmt
@@ -330,7 +331,7 @@ moon run src/cmd/main --target native -- -c 5 -d 3s http://localhost:8080/
 | TUI | Yes | Yes | No | No |
 | TTFB tracking | Yes | Yes | No | No |
 | CO correction | Yes | Yes | No | Yes |
-| SLA thresholds | Yes (exit 3) | No | No | Yes |
+| SLA thresholds | Yes (exit 3) | Partial | No | Yes |
 | CSV output | Yes (streaming) | Yes | Yes | No |
 | HTTP methods | 7 | All | All | All |
 | HTTP/2 | No (planned) | Yes (+HTTP/3) | Yes | Yes |
