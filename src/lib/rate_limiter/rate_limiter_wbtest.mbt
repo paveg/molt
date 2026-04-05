@@ -39,10 +39,15 @@ test "rate limiter with rate 5000 does not crash" {
 }
 
 ///|
-test "rate limiter with rate 0 is safe" {
-  // rate=0 → start() should return without spawning, no division by zero
+test "rate limiter with rate 0 clamps to 1" {
   let rl = RateLimiter::new(0)
-  inspect(rl.rate(), content="0")
+  inspect(rl.rate(), content="1")
+}
+
+///|
+test "rate limiter negative rate clamps to 1" {
+  let rl = RateLimiter::new(-5)
+  inspect(rl.rate(), content="1")
 }
 
 ///|
