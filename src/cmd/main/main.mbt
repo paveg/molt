@@ -93,6 +93,12 @@ fn parse_args() -> @types.Config raise {
         long="body",
         about="Request body string",
       ),
+      @argparse.OptionArg(
+        "body-file",
+        short='B',
+        long="body-file",
+        about="Request body from file path",
+      ),
     ],
     flags=[
       @argparse.FlagArg("no-tui", long="no-tui", about="Disable TUI, use plain output"),
@@ -171,10 +177,28 @@ fn parse_args() -> @types.Config raise {
       None => () // silently skip malformed headers
     }
   }
-  // Parse body
-  let body : String? = match matches.values.get("body") {
+  // Parse body (--body and --body-file are mutually exclusive)
+  let body_val : String? = match matches.values.get("body") {
     Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
     None => None
+  }
+  let body_file_val : String? = match matches.values.get("body-file") {
+    Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
+    None => None
+  }
+  let body : String? = match (body_val, body_file_val) {
+    (Some(_), Some(_)) =>
+      raise Failure::Failure("Cannot specify both --body and --body-file")
+    (Some(b), None) => Some(b)
+    (None, Some(path)) => {
+      let content = try {
+        @fs.read_file_to_string(path)
+      } catch {
+        _ => raise Failure::Failure("Failed to read body file: \{path}")
+      }
+      Some(content)
+    }
+    (None, None) => None
   }
   // Parse flags
   let no_tui = match matches.flags.get("no-tui") {
