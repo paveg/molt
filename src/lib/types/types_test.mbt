@@ -80,6 +80,21 @@ test "parse_header only colon-space prefix yields empty key" {
 }
 
 ///|
+test "parse_header rejects CRLF in value" {
+  inspect(@types.parse_header("X-Bad: value\r\nInjected: evil"), content="None")
+}
+
+///|
+test "parse_header rejects newline in name" {
+  inspect(@types.parse_header("X-Bad\n: value"), content="None")
+}
+
+///|
+test "parse_header rejects carriage return" {
+  inspect(@types.parse_header("X-Bad: value\rmore"), content="None")
+}
+
+///|
 test "default config has rate None" {
   let c = @types.Config::default_with_url("https://example.com")
   inspect(c.rate, content="None")

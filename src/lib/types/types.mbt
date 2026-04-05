@@ -117,7 +117,20 @@ pub fn parse_header(h : String) -> (String, String)? {
     }
   }
   if colon_pos >= 0 {
-    Some((h[:colon_pos].to_string(), h[colon_pos + 2:].to_string()))
+    let name = h[:colon_pos].to_string()
+    let value = h[colon_pos + 2:].to_string()
+    // Reject CRLF characters to prevent header injection
+    for c in name {
+      if c == '\r' || c == '\n' {
+        return None
+      }
+    }
+    for c in value {
+      if c == '\r' || c == '\n' {
+        return None
+      }
+    }
+    Some((name, value))
   } else {
     None
   }
