@@ -61,6 +61,9 @@ fn compute_scheduled_time(
   worker_id~ : Int,
   num_workers~ : Int,
 ) -> Int64 {
+  if rate <= 0 || num_workers <= 0 {
+    return epoch_us
+  }
   let interval_us = 1000000L / rate.to_int64()
   let stride_us = interval_us * num_workers.to_int64()
   epoch_us + request_index.to_int64() * stride_us + worker_id.to_int64() * interval_us
