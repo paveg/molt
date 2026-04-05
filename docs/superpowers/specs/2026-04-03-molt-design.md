@@ -37,23 +37,36 @@ molt [options] <URL>
 | `--duration` | `-d` | 10s | Test duration (`10s`, `1m`, `30s`, etc.) |
 | `--requests` | `-n` | (none) | Total request count (mutually exclusive with duration) |
 | `--rate` | `-r` | (none) | Target RPS (unlimited when unspecified) |
-| `--method` | `-m` | GET | HTTP method |
+| `--method` | `-m` | GET | HTTP method (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS) |
 | `--header` | `-H` | (none) | Custom header (can be specified multiple times) |
 | `--body` | `-b` | (none) | Request body (string) |
 | `--body-file` | `-B` | (none) | Request body (file path) |
 | `--timeout` | `-t` | 30s | Per-request timeout |
+| `--percentiles` | | 50,75,90,95,99,99.9 | Custom percentiles to compute (comma-separated) |
+| `--latency-threshold` | | (none) | Fail (exit 3) if p99 > value (e.g. `100ms`) |
+| `--error-threshold` | | (none) | Fail (exit 3) if error rate > percentage (e.g. `1.0`) |
+| `--warm-up` | | 0 | Warm-up duration excluded from stats (e.g. `3s`) |
+| `--auth` | | (none) | Basic auth credentials (`user:password`) |
+| `--serve` | | (none) | Start built-in test HTTP server (e.g. `127.0.0.1:8080`) |
 | `--no-tui` | | false | Disable TUI, use plain output |
 | `--json` | `-j` | false | Output results as JSON |
-| `--latency-correction` | | true | Coordinated Omission correction |
-| `--http2` | | false | Use HTTP/2 (future support) |
+| `--csv` | | false | Output per-request results as CSV (streaming) |
+| `--insecure` | `-k` | false | Skip TLS certificate verification |
+| `--disable-keepalive` | | false | Disable HTTP keep-alive, create new connection per request |
+| `--debug` | | false | Send a single request and print full details, then exit |
+| `--redirect` | `-L` | false | Follow HTTP redirects (up to 10 hops) |
 
 ### Validation Rules
 
 - `--duration` and `--requests` are mutually exclusive; specifying both is an error
 - When neither `--duration` nor `--requests` is specified, defaults to `--duration 10s`
 - `--body` and `--body-file` are mutually exclusive
+- `--csv` and `--json` are mutually exclusive
 - `--rate` must be a positive integer
 - `--connections` must be a positive integer
+- `--auth` must be in `user:password` format
+- `--percentiles` values must be between 0 and 100
+- `--serve` mode does not require a URL positional argument
 
 ## 3. Architecture
 
@@ -65,12 +78,12 @@ molt/
   src/
     cmd/
       main/
-        moon.pkg               -- depends: types, duration, coordinator, reporter, tui, mizchi/tui/vnode, mizchi/tui/io, async, argparse, strconv, env
-        main.mbt               -- entry point: CLI parse -> Config -> Coordinator -> Reporter
+        moon.pkg               -- depends: types, duration, threshold, coordinator, reporter, tui, mizchi/tui/vnode, mizchi/tui/io, async, async/http, async/socket, argparse, strconv, env, fs, sys
+        main.mbt               -- entry point: CLI parse -> Config -> Coordinator -> Reporter; serve mode, debug mode, CSV streaming, threshold checks
     lib/
       types/
         moon.pkg               -- (no dependencies)
-        types.mbt              -- Config, RequestResult, Stats, LatencyStats, HttpMethod, TestMode, parse_header
+        types.mbt              -- Config, RequestResult, Stats, LatencyStats, TimeSeriesPoint, HttpMethod, TestMode, parse_header, base64_encode
       duration/
         moon.pkg               -- depends: strconv
         duration.mbt           -- "10s", "1m30s" -> milliseconds
@@ -79,19 +92,27 @@ molt/
         moon.pkg               -- depends: math
         histogram.mbt          -- Gil Tene HDR Histogram
         histogram_test.mbt
+      rate_limiter/
+        moon.pkg               -- depends: async, async/aqueue
+        rate_limiter.mbt       -- Token bucket with absolute-deadline scheduling (oha pattern)
+        rate_limiter_wbtest.mbt
+      threshold/
+        moon.pkg               -- depends: types
+        threshold.mbt          -- Post-run pass/fail checks (latency p99, error rate)
+        threshold_test.mbt
       worker/
-        moon.pkg               -- depends: types, async/http, bench
-        worker.mbt             -- HTTP client loop, latency measurement
+        moon.pkg               -- depends: types, rate_limiter, async, async/http, bench, strconv
+        worker.mbt             -- HTTP client loop, TTFB measurement, CO correction, redirect following, keepalive control, error classification
         worker_wbtest.mbt
       coordinator/
-        moon.pkg               -- depends: types, worker, collector, tui, async, bench
-        coordinator.mbt        -- TaskGroup management, TuiCallbacks, termination
+        moon.pkg               -- depends: types, worker, collector, tui, rate_limiter, async, bench
+        coordinator.mbt        -- TaskGroup management, TuiCallbacks, rate limiter lifecycle, warm-up, time-series capture, termination
       collector/
         moon.pkg               -- depends: types, histogram
         collector.mbt          -- Synchronous result recording, stats aggregation
       reporter/
         moon.pkg               -- depends: types
-        reporter.mbt           -- Text/JSON summary output
+        reporter.mbt           -- Text/JSON/CSV summary output, TTFB and throughput sections
       tui/
         moon.pkg               -- depends: mizchi/tui/vnode, mizchi/tui/components, bench
         tui.mbt                -- TuiState, VNode-based render_tui_node, progress bar, stat widgets
@@ -120,14 +141,18 @@ CLI args
 
 | Package | Source | Purpose |
 |---|---|---|
-| `moonbitlang/async` (0.16.0) | registry | Async runtime, TaskGroup, sleep |
-| `moonbitlang/async/http` | registry | HTTP client (Client API) |
+| `moonbitlang/async` (0.16.0) | registry | Async runtime, TaskGroup, sleep, `now()` |
+| `moonbitlang/async/http` | registry | HTTP client (Client API), HTTP server |
+| `moonbitlang/async/aqueue` | registry | Async unbounded queue (rate limiter tokens) |
+| `moonbitlang/async/socket` | registry | `Addr::parse` for serve mode |
 | `mizchi/tui` (0.8.0) | registry | TUI framework (VNode, components, io) |
 | `@argparse` | core lib | CLI argument parsing |
 | `@bench` | core lib | Monotonic clock for latency measurement |
-| `@strconv` | core lib | String-to-int parsing |
+| `@strconv` | core lib | String-to-int/double parsing |
 | `@env` | core lib | CLI argv access |
 | `@math` | core lib | Math operations for histogram |
+| `@fs` | x lib | File reading (`--body-file`) |
+| `@sys` | x lib | `sys.exit()` for non-zero exit codes |
 
 ## 4. Core Types
 
@@ -146,30 +171,46 @@ pub(all) enum HttpMethod {
   Post
   Put
   Delete
+  Patch
+  Head
+  Options
 } derive(Show, Eq)
 
 pub(all) struct Config {
   url : String
   connections : Int          // default 50
   mode : TestMode            // Duration(ms) | RequestCount(Int)
-  http_method : HttpMethod   // Get, Post, Put, Delete
+  http_method : HttpMethod   // Get, Post, Put, Delete, Patch, Head, Options
   headers : Array[(String, String)]
   body : String?
   timeout_ms : Int           // default 30000
   enable_tui : Bool          // default true
   json_output : Bool         // default false
   latency_correction : Bool  // default true
+  rate : Int?                // target RPS, None = unlimited
+  percentiles : Array[Double] // default [50.0, 75.0, 90.0, 95.0, 99.0, 99.9]
+  latency_threshold_us : Int64? // fail if p99 exceeds this
+  error_threshold_pct : Double? // fail if error rate exceeds this %
+  warm_up_ms : Int           // default 0
+  insecure : Bool            // default false (skip TLS verification)
+  disable_keepalive : Bool   // default false (new connection per request)
+  debug : Bool               // default false (single request debug mode)
+  csv_output : Bool          // default false (per-request CSV streaming)
+  max_redirects : Int        // default 0 (0 = no redirects, --redirect sets 10)
+  serve_addr : String?       // built-in test HTTP server address
 } derive(Show)
 
-// Config::default_with_url(url) provides defaults
+// Config::default_with_url(url) provides defaults for all 21 fields
 
 // === worker -> collector ===
 
 pub(all) struct RequestResult {
   status_code : Int
-  latency_us : Int64         // microseconds
+  latency_us : Int64         // microseconds (total request time)
+  ttfb_us : Int64            // time to first byte (headers received, before body read)
   error : RequestError?
   scheduled_time_us : Int64  // 0 when not using rate limiting (non-optional)
+  response_size_bytes : Int64 // 0 when error or unknown
 } derive(Show)
 
 pub(all) enum RequestError {
@@ -183,6 +224,15 @@ pub(all) enum RequestError {
 
 // === collector -> reporter ===
 
+pub(all) struct TimeSeriesPoint {
+  elapsed_sec : Double
+  requests : Int
+  rps : Double
+  p50_us : Int64
+  p99_us : Int64
+  errors : Int
+} derive(Show)
+
 pub(all) struct Stats {
   total_requests : Int
   successful : Int
@@ -190,8 +240,13 @@ pub(all) struct Stats {
   total_time_ms : Double
   requests_per_sec : Double
   latency : LatencyStats
+  ttfb : LatencyStats             // time to first byte distribution
   status_codes : Map[Int, Int]
   errors : Map[String, Int]
+  custom_percentiles : Array[(Double, Int64)]  // user-specified percentiles
+  time_series : Array[TimeSeriesPoint]         // per-second snapshots
+  total_bytes : Int64              // total response bytes
+  bytes_per_sec : Double           // throughput
 } derive(Show)
 
 pub(all) struct LatencyStats {
@@ -211,14 +266,23 @@ pub(all) struct LatencyStats {
 
 // parse_header("Key: Value") -> Some(("Key", "Value"))
 // Splits on first ": " (colon + space). Returns None if format is invalid.
+// Rejects CRLF characters to prevent header injection.
 pub fn parse_header(h : String) -> (String, String)?
+
+// base64_encode(input) -> base64-encoded string (used for --auth Basic auth)
+pub fn base64_encode(input : String) -> String
 ```
 
 Notable differences from the original spec:
 - `Config.method` was renamed to `Config.http_method` to avoid shadowing MoonBit method syntax
-- `Config.rate` field was removed (rate limiting not yet implemented in Config)
+- `Config` now has 21 fields (up from 10 in the original spec) covering rate limiting, thresholds, warm-up, keepalive, debug, CSV, redirects, and serve mode
+- `HttpMethod` expanded from 4 variants to 7 (added Patch, Head, Options)
+- `RequestResult` gained `ttfb_us` and `response_size_bytes` fields
 - `RequestResult.scheduled_time_us` is `Int64` (not `Int64?`), defaults to `0L` when unused
-- `parse_header` is a standalone function in the types package, used by the CLI parser
+- `Stats` gained `ttfb`, `custom_percentiles`, `time_series`, `total_bytes`, and `bytes_per_sec` fields
+- `TimeSeriesPoint` is a new struct for per-second time-series snapshots
+- `parse_header` rejects CRLF characters to prevent header injection
+- `base64_encode` utility added for `--auth` Basic authentication
 
 ## 5. HDR Histogram (Gil Tene Algorithm)
 
@@ -276,46 +340,75 @@ pub(all) struct TuiCallbacks {
 ### Coordinator Flow
 
 ```
-pub async fn run(config: Config, tui_callbacks~: TuiCallbacks? = None) -> Stats {
+pub async fn run(
+  config: Config,
+  tui_callbacks~: TuiCallbacks? = None,
+  on_result~: ((RequestResult) -> Unit)? = None,  // CSV streaming callback
+) -> Stats {
   let collector = Collector::new()
+  let time_series : Array[TimeSeriesPoint] = []
   let mut stopped = false
-  let start_time = monotonic_clock_start()
+  let mut start_time = monotonic_clock_start()
   let tui_state = TuiState::new(config.url, config.connections, duration_ms)
 
-  // Initialize TUI
   tui_callbacks?.on_init()
 
   with_task_group(async fn(group) {
-    // TUI/plain update task (when callbacks provided)
+    // Set up rate limiter if configured
+    let limiter = match config.rate {
+      Some(rate) => { let rl = RateLimiter::new(rate); rl.start(group); Some(rl) }
+      None => None
+    }
+
+    // Time-series capture task (every 1 second)
+    group.spawn_bg(async fn() {
+      while not(stopped) {
+        sleep(1000)
+        time_series.push({ elapsed_sec, requests: interval, rps, p50_us, p99_us, errors })
+      }
+    })
+
+    // TUI/plain update task
     if tui_callbacks is Some(cb) {
       group.spawn_bg(async fn() {
         let interval = if config.enable_tui { 500 } else { 1000 }
         while not(stopped) {
-          tui_state.update(total_requests=..., elapsed_ms=..., ...)
+          tui_state.update(...)
           (cb.on_update)(tui_state)
-          async.sleep(interval)
+          sleep(interval)
         }
       })
     }
 
-    // Spawn Workers x connections
-    for _ in 0..<config.connections {
+    // Spawn Workers x connections (with rate limiter and CO correction params)
+    for i in 0..<num_workers {
       group.spawn_bg(async fn() {
-        worker.run(config, fn(result) { collector.record(result) }, fn() { stopped })
+        worker.run(config, fn(result) {
+          collector.record(result)
+          if on_result is Some(cb) { cb(result) }  // CSV streaming
+        }, fn() { stopped }, rate_limiter=limiter, worker_id=i, num_workers~)
       })
+    }
+
+    // Warm-up phase: sleep then reset collector and start_time
+    if config.warm_up_ms > 0 {
+      sleep(config.warm_up_ms)
+      collector.reset()
+      time_series.clear()
+      start_time = monotonic_clock_start()
     }
 
     // Termination
     match config.mode {
-      Duration(ms) => async.sleep(ms)
-      RequestCount(n) => { while collector.total_requests() < n { async.sleep(10) } }
+      Duration(ms) => sleep(ms)
+      RequestCount(n) => { while collector.total_requests() < n { sleep(10) } }
     }
     stopped = true
   })
 
-  // Cleanup TUI
   tui_callbacks?.on_cleanup()
-  collector.finalize(elapsed_ms)
+  let stats = collector.finalize(elapsed_ms, percentiles=config.percentiles)
+  { ..stats, time_series }  // attach time-series data
 }
 ```
 
@@ -324,10 +417,34 @@ Key implementation details:
 - No separate Collector task: workers call `collector.record(result)` directly via closure
 - Termination via boolean flag: `stopped = true` causes worker loops to exit, rather than closing a Queue
 - TUI state is created in the coordinator, updated periodically, and passed to the callback
+- Rate limiter lifecycle: created and started inside the TaskGroup, passed to all workers
+- Warm-up phase: after `warm_up_ms`, resets the collector (clears histogram) and restarts the clock; time-series is also cleared
+- Time-series capture: a background task samples per-second snapshots (requests, RPS, p50, p99, errors)
+- `on_result` callback: enables CSV streaming by forwarding each `RequestResult` to a caller-provided function
+- Custom percentiles: passed through to `collector.finalize` for user-specified percentile computation
 
-### Rate Limiter (Token Bucket) -- Not Yet Implemented
+### Rate Limiter (Token Bucket with Absolute-Deadline Scheduling)
 
-The rate limiter is designed but not yet implemented. The `Config.rate` field has been removed from the current types. When implemented, it will use a token bucket pattern with `Queue[Unit]`.
+The rate limiter (`src/lib/rate_limiter/`) uses a token bucket pattern with `@aqueue.Queue[Unit]` (unbounded). It employs absolute-deadline scheduling (oha pattern) to prevent cumulative drift:
+
+```
+pub struct RateLimiter {
+  priv rate : Int
+  priv queue : @aqueue.Queue[Unit]
+}
+
+fn RateLimiter::start(self, group : TaskGroup[Unit]) -> Unit {
+  // Spawns a background task that emits tokens at the configured rate.
+  // Uses absolute deadlines: next_deadline = start + token_index * interval_ms
+  // This prevents drift that would accumulate with relative sleep intervals.
+}
+
+async fn RateLimiter::acquire(self) -> Unit {
+  self.queue.get()  // blocks until a token is available
+}
+```
+
+The Coordinator creates the rate limiter when `config.rate` is `Some(rate)`, calls `start(group)` to begin token emission, and passes it to each Worker. Workers call `acquire()` before each request.
 
 ## 7. Coordinated Omission Correction
 
@@ -362,41 +479,62 @@ When `--rate` is not specified (max throughput mode), Coordinated Omission does 
 
 ### Worker Loop
 
-Each Worker is an `async fn` that maintains one persistent TCP connection via `Client::new(base_url)`. The URL is split into base and path using `parse_url`. The worker accepts two callbacks: `on_result` for recording results and `should_stop` for termination.
+Each Worker is an `async fn` that maintains one persistent TCP connection via `Client::new(base_url)`. The URL is split into base and path using `parse_url`. The worker accepts callbacks for result recording and termination, plus optional rate limiter and CO correction parameters.
 
 ```
 pub async fn run(
   config : Config,
   on_result : (RequestResult) -> Unit,
   should_stop : () -> Bool,
+  rate_limiter? : RateLimiter? = None,
+  worker_id? : Int = 0,
+  num_workers? : Int = 1,
 ) -> Unit {
   let (base_url, path) = parse_url(config.url)
-  let client = Client::new(base_url)
+  let mut client = Client::new(base_url)
   let headers = build_headers(config.headers)
+  let use_co = config.latency_correction && rate_limiter is Some(_)
 
   while not(should_stop()) {
+    if rate_limiter is Some(rl) { rl.acquire() }
+    let scheduled_us = if use_co { compute_scheduled_time(...) } else { 0L }
     let start = monotonic_clock_start()
+
     try {
-      let response = match config.http_method {
-        Get => client.get(path, extra_headers=headers)
-        Post => client.post(path, body_data, extra_headers=headers)
-        Put => client.put(path, body_data, extra_headers=headers)
-        Delete => {
-          client.request(Delete, path, extra_headers=headers)
-          client.end_request()
+      let result = with_timeout_opt(config.timeout_ms, async fn() {
+        match config.http_method {
+          Get => client.get(path, extra_headers=headers)
+          Post => client.post(path, body_data, extra_headers=headers)
+          Put => client.put(path, body_data, extra_headers=headers)
+          Patch => { client.request(Patch, ...); client.write(body_data); client.end_request() }
+          Head => { client.request(Head, ...); client.end_request() }
+          Options => { client.request(Options, ...); client.end_request() }
+          Delete => { client.request(Delete, ...); client.end_request() }
         }
+      })
+      match result {
+        Some(response) => {
+          let ttfb_us = monotonic_clock_end(start)  // TTFB: before body drain
+          client.skip_response_body()
+          let final_response = if config.max_redirects > 0 && is_redirect(response) {
+            follow_redirects(response, config.max_redirects, config.headers)
+          } else { response }
+          let latency_us = monotonic_clock_end(start)  // total time
+          // CO correction applied to both ttfb_us and latency_us when use_co=true
+          on_result({ status_code, latency_us, ttfb_us, error: None, scheduled_time_us, response_size_bytes })
+          if config.disable_keepalive {
+            client.close(); client = Client::new(base_url)
+          }
+        }
+        None => on_result(make_error_result(elapsed, Timeout, scheduled_us))
       }
-      let elapsed_us = monotonic_clock_end(start)
-      on_result({ status_code: response.code, latency_us: elapsed_us.to_int64(),
-                  error: None, scheduled_time_us: 0L })
-      client.skip_response_body()
     } catch {
-      _ => {
-        let elapsed_us = monotonic_clock_end(start)
-        on_result({ status_code: 0, latency_us: elapsed_us.to_int64(),
-                    error: Some(Other("request failed")), scheduled_time_us: 0L })
+      err => {
+        on_result(make_error_result(elapsed, classify_error(err), scheduled_us))
+        client.close(); client = Client::new(base_url)  // reconnect after error
       }
     }
+    request_index += 1
   }
   client.close()
 }
@@ -405,9 +543,14 @@ pub async fn run(
 Key implementation details:
 - `parse_url` splits URL at the first `/` after `://` to separate base URL from path
 - `build_headers` converts `Array[(String, String)]` to `Map[String, String]` for the HTTP client
-- `skip_response_body()` is called after each successful response to drain the connection
-- Error handling currently catches all exceptions as `Other("request failed")` -- fine-grained error classification (Timeout, ConnectionRefused, etc.) is defined in types but not yet used in the worker
-- No rate limiter integration yet: the `rate_limiter?.acquire()` pattern is not implemented
+- **TTFB measurement**: `ttfb_us` is captured after headers are received but before `skip_response_body()`; `latency_us` is captured after body drain and redirect following
+- **Redirect following**: `follow_redirects` uses `@http.get` for up to `max_redirects` hops, following `Location` headers on 3xx responses
+- **Keepalive control**: when `disable_keepalive` is true, the client is closed and recreated after each request
+- **Per-request timeout**: `@async.with_timeout_opt(timeout_ms, ...)` returns `None` on timeout, producing a `Timeout` error result
+- **Error classification**: `classify_error` pattern-matches on the error message string to classify into `Timeout`, `ConnectionRefused`, `ConnectionReset`, `DnsError`, `TlsError`, or `Other`
+- **Reconnection on error**: after a caught exception, the client is closed and recreated to recover from broken connection state
+- **CO correction integration**: when `rate_limiter` is provided and `latency_correction` is true, both `ttfb_us` and `latency_us` are corrected using `compute_corrected_latency(elapsed_us, scheduled_us, actual_start_us)`. The `compute_scheduled_time` function distributes scheduled times evenly across workers using stride-based interleaving
+- **Response size**: extracted from `Content-Length` header when available (0 otherwise)
 
 ## 9. Reporter
 
@@ -552,10 +695,10 @@ No TUI callbacks are provided (`None`). The coordinator runs silently, and `repo
 ### Phase 2: Feature Expansion -- DONE
 
 - POST / PUT / DELETE + headers + body support
-- Status code / error classification (types defined; worker uses catch-all)
-- JSON output (`--json`) with `report_json(config, stats)`
-- `parse_header` utility for `-H "Key: Value"` parsing
-- Note: `--rate` and Coordinated Omission correction are designed but not yet implemented
+- Fine-grained error classification in worker (`classify_error` pattern matching on error messages)
+- JSON output (`--json`) with `report_json(config, stats)` including TTFB, throughput, time-series, and custom percentiles sections
+- `parse_header` utility with CRLF injection prevention
+- `base64_encode` utility for `--auth` Basic authentication
 
 ### Phase 3: TUI + Polish -- DONE
 
@@ -564,7 +707,33 @@ No TUI callbacks are provided (`None`). The coordinator runs silently, and `repo
 - TuiState with progress bar, stat widgets, live p50/p99
 - `--no-tui` plain output mode via same callback pattern
 - `format_plain_status` for one-line periodic updates
-- Note: `--timeout` per-request enforcement and connection reconnection are designed but not yet implemented
+
+### Phase 4: Rate Limiting + CO Correction -- DONE
+
+- Token bucket rate limiter with absolute-deadline scheduling (prevents cumulative drift)
+- Coordinated Omission correction in worker: corrected latency = elapsed + (actual_start - scheduled_time)
+- Stride-based scheduled time distribution across workers (`compute_scheduled_time`)
+- Both TTFB and total latency are CO-corrected when `--rate` is active
+
+### Phase 5: Advanced Features -- DONE
+
+- PATCH / HEAD / OPTIONS HTTP methods
+- TTFB (Time to First Byte) measurement and reporting
+- Per-request timeout via `@async.with_timeout_opt`
+- Connection reconnection on error (client close + recreate)
+- Keepalive control (`--disable-keepalive`)
+- Redirect following (`--redirect` / `-L`, up to 10 hops)
+- Custom percentiles (`--percentiles 50,90,99,99.99`)
+- Warm-up period (`--warm-up`, resets collector and start time)
+- Per-second time-series capture in coordinator
+- Response size tracking and throughput reporting (`total_bytes`, `bytes_per_sec`)
+- CSV streaming output (`--csv`, per-request rows)
+- Debug mode (`--debug`, single request with full response details)
+- Built-in test HTTP server (`--serve 127.0.0.1:8080`)
+- Threshold checks (`--latency-threshold`, `--error-threshold`) with exit code 3 on violation
+- Basic auth (`--auth user:password`)
+- TLS skip (`--insecure` / `-k`)
+- `--body-file` for reading request body from file
 
 ## 13. Design Decisions
 
@@ -576,9 +745,16 @@ No TUI callbacks are provided (`None`). The coordinator runs silently, and `repo
 | TUI decoupling | `TuiCallbacks` struct pattern | Coordinator passes `TuiState` to caller-provided callbacks; avoids coordinator depending on `mizchi/tui` directly; enables plain mode and JSON mode via same interface |
 | HTTP client | Low-level `Client` API | Connection reuse (Keep-Alive) essential for load testing; `skip_response_body()` to drain connections |
 | Field naming | `http_method` instead of `method` | Avoids shadowing MoonBit's method syntax in struct definitions |
-| `scheduled_time_us` type | `Int64` (non-optional, default `0L`) | Simpler than `Int64?`; zero value is unambiguous since rate limiting is not yet implemented |
+| `scheduled_time_us` type | `Int64` (non-optional, default `0L`) | Simpler than `Int64?`; zero value is unambiguous when rate limiting is inactive |
 | Collector pattern | Synchronous `record()` via closure | No async Queue needed; workers call `collector.record(result)` through a closure passed by the coordinator; simpler than Queue-based design |
 | Project structure | Modular (per-component packages) with `moon.pkg` files | 1:1 mapping with architecture diagram; independently testable; `moon.pkg` (not `moon.pkg.json`) is the MoonBit package manifest format |
 | Entry point location | `src/cmd/main/` | Separates CLI entry point from library packages under `src/lib/` |
-| Types package | `src/lib/types/` (no `config/` package) | All shared types (`Config`, `RequestResult`, `Stats`, etc.) and utility functions (`parse_header`) in one package; no separate config validation package needed |
+| Types package | `src/lib/types/` (no `config/` package) | All shared types (`Config`, `RequestResult`, `Stats`, etc.) and utility functions (`parse_header`, `base64_encode`) in one package; no separate config validation package needed |
 | Test strategy | Unit + Integration | Component correctness + CLI E2E behavior; benchmarks deferred to future work |
+| Threshold module | Separate `threshold/` package | Post-run pass/fail checks (p99 latency, error rate) decoupled from reporter; returns `ThresholdResult` with `passed` and `violations`; main exits with code 3 on violation |
+| Serve mode | Built-in test HTTP server in `main.mbt` | `--serve 127.0.0.1:8080` starts a simple `@http.Server` returning `{"status":"ok"}`; enables self-contained testing without external infrastructure |
+| TTFB measurement | Separate `ttfb_us` field in `RequestResult` | Measured after headers received but before body drain; provides visibility into server processing time vs transfer time; CO-corrected independently |
+| CSV streaming | Per-request CSV output via `on_result` callback | `--csv` flag enables real-time CSV rows (latency, status, error, size) printed as each request completes; uses coordinator's `on_result` callback parameter |
+| Rate limiter scheduling | Absolute-deadline (oha pattern) | `next_deadline = start + token_index * interval` prevents cumulative drift from relative sleep; stride-based interleaving distributes scheduled times evenly across workers |
+| Error reconnection | Close + recreate `Client` on error | After a caught exception, the HTTP client may be in a broken state; closing and recreating ensures the next request starts with a clean connection |
+| Exit codes | 0 (success), 2 (failures), 3 (threshold violation) | Enables CI/CD integration; threshold violations are distinct from request failures |

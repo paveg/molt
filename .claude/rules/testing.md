@@ -18,8 +18,8 @@ For every function, test:
 ## Test Execution
 
 ```sh
-moon test --target native   # full suite (208 tests)
-moon test                   # wasm-gc subset (152 tests)
+moon test --target native   # full suite (231 tests)
+moon test                   # wasm-gc subset (175 tests)
 ```
 
 - native-only packages: worker, coordinator, tui, rate_limiter
