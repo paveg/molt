@@ -6,6 +6,7 @@ test "collect single successful result" {
     latency_us: 5000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="1")
@@ -22,6 +23,7 @@ test "collect mixed results" {
       latency_us: 1000L,
       error: None,
       scheduled_time_us: 0L,
+      response_size_bytes: 0L,
     })
   }
   for _ in 0..<10 {
@@ -30,6 +32,7 @@ test "collect mixed results" {
       latency_us: 5000L,
       error: None,
       scheduled_time_us: 0L,
+      response_size_bytes: 0L,
     })
   }
   let stats = c.finalize(1000.0)
@@ -48,12 +51,14 @@ test "collect error results" {
     latency_us: 0L,
     error: Some(@types.RequestError::Timeout),
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   c.record({
     status_code: 0,
     latency_us: 0L,
     error: Some(@types.RequestError::ConnectionRefused),
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="2")
@@ -69,6 +74,7 @@ test "latency stats are computed" {
       latency_us: (i * 100).to_int64(),
       error: None,
       scheduled_time_us: 0L,
+      response_size_bytes: 0L,
     })
   }
   let stats = c.finalize(1000.0)
@@ -88,6 +94,7 @@ test "finalize with zero time" {
     latency_us: 1000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(0.0)
   // RPS should be 0 when total_time is 0
@@ -103,6 +110,7 @@ test "all requests failed" {
       latency_us: 0L,
       error: Some(@types.RequestError::Timeout),
       scheduled_time_us: 0L,
+      response_size_bytes: 0L,
     })
   }
   let stats = c.finalize(1000.0)
@@ -119,6 +127,7 @@ test "zero latency successful request" {
     latency_us: 0L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="1")
@@ -134,18 +143,21 @@ test "multiple error types accumulated" {
     latency_us: 0L,
     error: Some(@types.RequestError::Timeout),
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   c.record({
     status_code: 0,
     latency_us: 0L,
     error: Some(@types.RequestError::Timeout),
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   c.record({
     status_code: 0,
     latency_us: 0L,
     error: Some(@types.RequestError::ConnectionReset),
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.failed, content="3")
@@ -177,6 +189,7 @@ test "coordinated omission correction uses scheduled_time" {
     latency_us: 10000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   // Simulate: scheduled at t=10000us, sent on time, response at t=15000us
   // Raw = corrected = 5000us
@@ -185,6 +198,7 @@ test "coordinated omission correction uses scheduled_time" {
     latency_us: 5000L,
     error: None,
     scheduled_time_us: 10000L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="2")
@@ -201,12 +215,14 @@ test "scheduled_time_us zero means no correction" {
     latency_us: 1000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   c.record({
     status_code: 200,
     latency_us: 2000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.latency.min_us, content="1000")
@@ -221,18 +237,21 @@ test "5xx status codes counted as failed" {
     latency_us: 1000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   c.record({
     status_code: 503,
     latency_us: 1000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   c.record({
     status_code: 200,
     latency_us: 1000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="3")
@@ -248,6 +267,7 @@ test "499 is not counted as server error" {
     latency_us: 1000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.successful, content="1")
@@ -262,6 +282,7 @@ test "500 boundary" {
     latency_us: 1000L,
     error: None,
     scheduled_time_us: 0L,
+    response_size_bytes: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.failed, content="1")
@@ -275,4 +296,131 @@ test "empty collector finalize" {
   inspect(stats.successful, content="0")
   inspect(stats.failed, content="0")
   inspect(stats.requests_per_sec, content="0")
+}
+
+///|
+test "custom percentiles computed" {
+  let c = @collector.Collector::new()
+  for i in 1..<=1000 {
+    c.record({
+      status_code: 200,
+      latency_us: i.to_int64(),
+      error: None,
+      scheduled_time_us: 0L,
+      response_size_bytes: 0L,
+    })
+  }
+  let stats = c.finalize(1000.0, percentiles=[25.0, 50.0, 75.0, 99.99])
+  inspect(stats.custom_percentiles.length(), content="4")
+  // Verify percentile labels match requested values
+  inspect(stats.custom_percentiles[0].0, content="25")
+  inspect(stats.custom_percentiles[1].0, content="50")
+  inspect(stats.custom_percentiles[2].0, content="75")
+  inspect(stats.custom_percentiles[3].0, content="99.99")
+}
+
+///|
+test "custom percentiles values are reasonable" {
+  let c = @collector.Collector::new()
+  for i in 1..<=1000 {
+    c.record({
+      status_code: 200,
+      latency_us: i.to_int64(),
+      error: None,
+      scheduled_time_us: 0L,
+      response_size_bytes: 0L,
+    })
+  }
+  let stats = c.finalize(1000.0, percentiles=[50.0, 99.0])
+  let p50_val = stats.custom_percentiles[0].1
+  let p99_val = stats.custom_percentiles[1].1
+  // p50 should be around 500, p99 around 990
+  inspect(p50_val >= 495L && p50_val <= 505L, content="true")
+  inspect(p99_val >= 985L && p99_val <= 1000L, content="true")
+}
+
+///|
+test "default percentiles when none specified" {
+  let c = @collector.Collector::new()
+  c.record({
+    status_code: 200,
+    latency_us: 1000L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  let stats = c.finalize(1000.0)
+  // Default percentiles: [50, 75, 90, 95, 99, 99.9]
+  inspect(stats.custom_percentiles.length(), content="6")
+}
+
+///|
+test "response size accumulated" {
+  let c = @collector.Collector::new()
+  c.record({
+    status_code: 200,
+    latency_us: 1000L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 1024L,
+  })
+  c.record({
+    status_code: 200,
+    latency_us: 1000L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 2048L,
+  })
+  let stats = c.finalize(1000.0)
+  inspect(stats.total_bytes, content="3072")
+}
+
+///|
+test "bytes per sec computed" {
+  let c = @collector.Collector::new()
+  c.record({
+    status_code: 200,
+    latency_us: 1000L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 5000L,
+  })
+  let stats = c.finalize(1000.0)
+  // 5000 bytes in 1 second = 5000 bytes/sec
+  inspect(stats.bytes_per_sec, content="5000")
+}
+
+///|
+test "bytes per sec zero when no time" {
+  let c = @collector.Collector::new()
+  c.record({
+    status_code: 200,
+    latency_us: 1000L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 5000L,
+  })
+  let stats = c.finalize(0.0)
+  inspect(stats.bytes_per_sec, content="0")
+}
+
+///|
+test "error requests still accumulate bytes" {
+  let c = @collector.Collector::new()
+  c.record({
+    status_code: 0,
+    latency_us: 1000L,
+    error: Some(@types.RequestError::Timeout),
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  c.record({
+    status_code: 200,
+    latency_us: 1000L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 1024L,
+  })
+  let stats = c.finalize(1000.0)
+  inspect(stats.total_bytes, content="1024")
 }

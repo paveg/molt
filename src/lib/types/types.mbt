@@ -10,6 +10,9 @@ pub(all) enum HttpMethod {
   Post
   Put
   Delete
+  Patch
+  Head
+  Options
 } derive(Show, Eq)
 
 ///|
@@ -25,6 +28,11 @@ pub(all) struct Config {
   json_output : Bool
   latency_correction : Bool
   rate : Int? // target RPS, None = unlimited
+  percentiles : Array[Double]
+  latency_threshold_us : Int64?
+  error_threshold_pct : Double?
+  warm_up_ms : Int
+  insecure : Bool
 } derive(Show)
 
 ///|
@@ -41,6 +49,11 @@ pub fn Config::default_with_url(url : String) -> Config {
     json_output: false,
     latency_correction: true,
     rate: None,
+    percentiles: [50.0, 75.0, 90.0, 95.0, 99.0, 99.9],
+    latency_threshold_us: None,
+    error_threshold_pct: None,
+    warm_up_ms: 0,
+    insecure: false,
   }
 }
 
@@ -60,6 +73,7 @@ pub(all) struct RequestResult {
   latency_us : Int64
   error : RequestError?
   scheduled_time_us : Int64 // 0 when not using rate limiting
+  response_size_bytes : Int64 // 0 when error or unknown
 } derive(Show)
 
 ///|
@@ -77,6 +91,16 @@ pub(all) struct LatencyStats {
 } derive(Show)
 
 ///|
+pub(all) struct TimeSeriesPoint {
+  elapsed_sec : Double
+  requests : Int
+  rps : Double
+  p50_us : Int64
+  p99_us : Int64
+  errors : Int
+} derive(Show)
+
+///|
 pub(all) struct Stats {
   total_requests : Int
   successful : Int
@@ -86,6 +110,10 @@ pub(all) struct Stats {
   latency : LatencyStats
   status_codes : Map[Int, Int]
   errors : Map[String, Int]
+  custom_percentiles : Array[(Double, Int64)]
+  time_series : Array[TimeSeriesPoint]
+  total_bytes : Int64
+  bytes_per_sec : Double
 } derive(Show)
 
 ///|
@@ -113,6 +141,54 @@ pub fn LatencyStats::new(
     mean_us,
     stdev_us,
   }
+}
+
+///|
+let base64_table : Array[Char] = [
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+  'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+  'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/',
+]
+
+///|
+pub fn base64_encode(input : String) -> String {
+  if input.length() == 0 {
+    return ""
+  }
+  let bytes : Array[Int] = []
+  for c in input {
+    bytes.push(c.to_int())
+  }
+  let len = bytes.length()
+  let buf = StringBuilder::new()
+  let mut i = 0
+  while i + 2 < len {
+    let b0 = bytes[i]
+    let b1 = bytes[i + 1]
+    let b2 = bytes[i + 2]
+    buf.write_char(base64_table[b0 >> 2])
+    buf.write_char(base64_table[((b0 & 0x03) << 4) | (b1 >> 4)])
+    buf.write_char(base64_table[((b1 & 0x0F) << 2) | (b2 >> 6)])
+    buf.write_char(base64_table[b2 & 0x3F])
+    i = i + 3
+  }
+  let remaining = len - i
+  if remaining == 1 {
+    let b0 = bytes[i]
+    buf.write_char(base64_table[b0 >> 2])
+    buf.write_char(base64_table[(b0 & 0x03) << 4])
+    buf.write_char('=')
+    buf.write_char('=')
+  } else if remaining == 2 {
+    let b0 = bytes[i]
+    let b1 = bytes[i + 1]
+    buf.write_char(base64_table[b0 >> 2])
+    buf.write_char(base64_table[((b0 & 0x03) << 4) | (b1 >> 4)])
+    buf.write_char(base64_table[(b1 & 0x0F) << 2])
+    buf.write_char('=')
+  }
+  buf.to_string()
 }
 
 ///|
@@ -157,6 +233,10 @@ pub fn Stats::new(
   latency~ : LatencyStats,
   status_codes~ : Map[Int, Int],
   errors~ : Map[String, Int],
+  custom_percentiles? : Array[(Double, Int64)] = [],
+  time_series? : Array[TimeSeriesPoint] = [],
+  total_bytes? : Int64 = 0L,
+  bytes_per_sec? : Double = 0.0,
 ) -> Stats {
   {
     total_requests,
@@ -167,5 +247,9 @@ pub fn Stats::new(
     latency,
     status_codes,
     errors,
+    custom_percentiles,
+    time_series,
+    total_bytes,
+    bytes_per_sec,
   }
 }

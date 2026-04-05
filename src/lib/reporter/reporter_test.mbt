@@ -172,6 +172,11 @@ test "report_json with RequestCount mode" {
     json_output: true,
     latency_correction: true,
     rate: None,
+    percentiles: [50.0, 75.0, 90.0, 95.0, 99.0, 99.9],
+    latency_threshold_us: None,
+    error_threshold_pct: None,
+    warm_up_ms: 0,
+    insecure: false,
   }
   let stats = make_test_stats()
   let json = @reporter.report_json(config, stats)
@@ -211,6 +216,11 @@ test "report_json with rate set" {
     json_output: true,
     latency_correction: false,
     rate: Some(100),
+    percentiles: [50.0, 75.0, 90.0, 95.0, 99.0, 99.9],
+    latency_threshold_us: None,
+    error_threshold_pct: None,
+    warm_up_ms: 0,
+    insecure: false,
   }
   let stats = make_test_stats()
   let json = @reporter.report_json(config, stats)
@@ -241,9 +251,181 @@ test "report_json with empty status codes" {
     },
     status_codes: {},
     errors: {},
+    custom_percentiles: [],
+    time_series: [],
+    total_bytes: 0L,
+    bytes_per_sec: 0.0,
   }
   let json = @reporter.report_json(config, stats)
   inspect(json.contains("\"status_codes\": {"), content="true")
   inspect(json.contains("\"errors\": {"), content="true")
   inspect(json.contains("\"total_requests\": 0"), content="true")
+}
+
+///|
+test "report_json contains custom percentiles" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let stats = @types.Stats::new(
+    total_requests=100,
+    successful=100,
+    failed=0,
+    total_time_ms=1000.0,
+    requests_per_sec=100.0,
+    latency=@types.LatencyStats::new(
+      p50_us=1000L,
+      p75_us=2000L,
+      p90_us=3000L,
+      p95_us=4000L,
+      p99_us=5000L,
+      p99_9_us=6000L,
+      max_us=7000L,
+      min_us=500L,
+      mean_us=1500.0,
+      stdev_us=800.0,
+    ),
+    status_codes={ 200: 100 },
+    errors={},
+    custom_percentiles=[(50.0, 1000L), (99.0, 5000L)],
+  )
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"custom_percentiles\""), content="true")
+  inspect(json.contains("p50.00_ms"), content="true")
+  inspect(json.contains("p99.00_ms"), content="true")
+}
+
+///|
+test "report_json contains throughput section" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let stats = @types.Stats::new(
+    total_requests=100,
+    successful=100,
+    failed=0,
+    total_time_ms=1000.0,
+    requests_per_sec=100.0,
+    latency=@types.LatencyStats::new(
+      p50_us=1000L,
+      p75_us=2000L,
+      p90_us=3000L,
+      p95_us=4000L,
+      p99_us=5000L,
+      p99_9_us=6000L,
+      max_us=7000L,
+      min_us=500L,
+      mean_us=1500.0,
+      stdev_us=800.0,
+    ),
+    status_codes={ 200: 100 },
+    errors={},
+    total_bytes=102400L,
+    bytes_per_sec=102400.0,
+  )
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"throughput\""), content="true")
+  inspect(json.contains("\"total_bytes\": 102400"), content="true")
+  inspect(json.contains("\"bytes_per_sec\""), content="true")
+}
+
+///|
+test "report_json contains time series" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let point : @types.TimeSeriesPoint = {
+    elapsed_sec: 1.0,
+    requests: 50,
+    rps: 50.0,
+    p50_us: 1000L,
+    p99_us: 5000L,
+    errors: 2,
+  }
+  let stats = @types.Stats::new(
+    total_requests=50,
+    successful=48,
+    failed=2,
+    total_time_ms=1000.0,
+    requests_per_sec=50.0,
+    latency=@types.LatencyStats::new(
+      p50_us=1000L,
+      p75_us=2000L,
+      p90_us=3000L,
+      p95_us=4000L,
+      p99_us=5000L,
+      p99_9_us=6000L,
+      max_us=7000L,
+      min_us=500L,
+      mean_us=1500.0,
+      stdev_us=800.0,
+    ),
+    status_codes={ 200: 48 },
+    errors={},
+    time_series=[point],
+  )
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"time_series\""), content="true")
+  inspect(json.contains("\"elapsed_sec\""), content="true")
+  inspect(json.contains("\"errors\": 2"), content="true")
+}
+
+///|
+test "report_text shows custom percentiles" {
+  let stats = @types.Stats::new(
+    total_requests=100,
+    successful=100,
+    failed=0,
+    total_time_ms=1000.0,
+    requests_per_sec=100.0,
+    latency=@types.LatencyStats::new(
+      p50_us=1000L,
+      p75_us=2000L,
+      p90_us=3000L,
+      p95_us=4000L,
+      p99_us=5000L,
+      p99_9_us=6000L,
+      max_us=7000L,
+      min_us=500L,
+      mean_us=1500.0,
+      stdev_us=800.0,
+    ),
+    status_codes={ 200: 100 },
+    errors={},
+    custom_percentiles=[(50.0, 1000L), (99.0, 5000L)],
+  )
+  let text = @reporter.report_text(stats)
+  inspect(text.contains("p50.00"), content="true")
+  inspect(text.contains("p99.00"), content="true")
+}
+
+///|
+test "report_text shows throughput when bytes present" {
+  let stats = @types.Stats::new(
+    total_requests=100,
+    successful=100,
+    failed=0,
+    total_time_ms=1000.0,
+    requests_per_sec=100.0,
+    latency=@types.LatencyStats::new(
+      p50_us=1000L,
+      p75_us=2000L,
+      p90_us=3000L,
+      p95_us=4000L,
+      p99_us=5000L,
+      p99_9_us=6000L,
+      max_us=7000L,
+      min_us=500L,
+      mean_us=1500.0,
+      stdev_us=800.0,
+    ),
+    status_codes={ 200: 100 },
+    errors={},
+    total_bytes=102400L,
+    bytes_per_sec=102400.0,
+  )
+  let text = @reporter.report_text(stats)
+  inspect(text.contains("Throughput"), content="true")
+  inspect(text.contains("102400 bytes"), content="true")
+}
+
+///|
+test "report_text hides throughput when no bytes" {
+  let stats = make_test_stats()
+  let text = @reporter.report_text(stats)
+  inspect(text.contains("Throughput"), content="false")
 }

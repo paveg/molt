@@ -8,26 +8,52 @@ A lightweight, fast HTTP load testing tool inspired by [oha](https://github.com/
 
 - **High-performance concurrent load generation** with configurable worker count
 - **HDR Histogram latency recording** -- Gil Tene algorithm with 3 significant figures, O(1) per record
-- **Real-time TUI dashboard** -- live RPS, p50/p99, progress bar via [mizchi/tui](https://mooncakes.io/docs/#/mizchi/tui/)
+- **Real-time TUI dashboard** -- live RPS, p50/p99, progress bar via [mizchi/tui](https://mooncakes.io/docs/mizchi/tui)
 - **Multiple output modes** -- TUI (default), plain text (`--no-tui`), JSON (`--json`)
-- **Full HTTP method support** -- GET, POST, PUT, DELETE with custom headers and body
+- **Full HTTP method support** -- GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS with custom headers and body
 - **Flexible test modes** -- by duration (`-d 30s`) or by total request count (`-n 10000`)
 - **Accurate percentiles** -- p50, p75, p90, p95, p99, p99.9 via HDR Histogram
 - **Rate limiting** -- fixed RPS mode with token bucket (`--rate`)
 - **Coordinated Omission correction** -- accurate latency under rate-limited load
 - **Per-request timeout** -- configurable via `--timeout`
 - **Error classification** -- timeout, connection refused, reset, DNS, TLS errors
-- **Small binary** -- ~2.4 MB standalone native executable
+- **SLA thresholds** -- `--latency-threshold` and `--error-threshold` for CI pass/fail (exit code 3)
+- **Warm-up phase** -- `--warm-up 3s` excludes initial requests from statistics
+- **Custom percentiles** -- `--percentiles 50,90,99,99.99`
+- **Time-series output** -- per-second RPS/latency snapshots in JSON
+- **Response size tracking** -- total bytes and bytes/sec in output
+- **Basic Auth** -- `--auth user:password`
+- **Small binary** -- ~2.3 MB standalone native executable
+
+## Installation
+
+### Pre-built binary (recommended)
+
+Download from [GitHub Releases](https://github.com/paveg/molt/releases):
+
+```sh
+# macOS (Apple Silicon)
+curl -sL https://github.com/paveg/molt/releases/latest/download/molt-darwin-arm64.tar.gz | tar xz
+sudo mv molt /usr/local/bin/
+
+# Linux (x86_64)
+curl -sL https://github.com/paveg/molt/releases/latest/download/molt-linux-amd64.tar.gz | tar xz
+sudo mv molt /usr/local/bin/
+```
+
+### Build from source
+
+Requires [MoonBit](https://www.moonbitlang.com/) toolchain.
+
+```sh
+git clone https://github.com/paveg/molt.git && cd molt
+moon build --target native --release
+cp _build/native/release/build/src/cmd/main/main.exe /usr/local/bin/molt
+```
 
 ## Quick Start
 
 ```sh
-# Build
-moon build --target native
-
-# Copy to PATH (optional)
-cp _build/native/debug/build/src/cmd/main/main.exe /usr/local/bin/molt
-
 # Run a basic load test
 molt -c 10 -d 5s http://localhost:8080/api/health
 ```
@@ -63,6 +89,23 @@ molt -t 5s -c 10 -d 10s http://localhost:8080/slow-endpoint
 # Request body from file
 molt -m POST -H 'Content-Type: application/json' -B payload.json \
   -c 10 -d 10s http://localhost:8080/api/data
+
+# SLA enforcement in CI (exit 3 if p99 > 100ms or error rate > 1%)
+molt --latency-threshold 100ms --error-threshold 1.0 \
+  -c 50 -d 30s http://localhost:8080/api/health
+
+# Warm-up: skip first 5 seconds from statistics
+molt --warm-up 5s -c 20 -d 30s http://localhost:8080/
+
+# Basic auth
+molt --auth admin:secret -c 10 -d 10s http://localhost:8080/api/protected
+
+# Custom percentiles
+molt --percentiles 50,90,99,99.99 -c 10 -d 10s http://localhost:8080/
+
+# PATCH request
+molt -m PATCH -H 'Content-Type: application/json' -b '{"status":"active"}' \
+  -c 5 -d 10s http://localhost:8080/api/users/1
 
 # Plain text mode (no TUI, prints periodic status lines)
 molt --no-tui -c 10 -d 10s http://localhost:8080/
@@ -156,12 +199,18 @@ Usage: molt [options] <url>
 | `--connections` | `-c` | `50` | Number of concurrent connections |
 | `--duration` | `-d` | `10s` | Test duration (`10s`, `1m`, `1m30s`) |
 | `--requests` | `-n` | -- | Total request count (mutually exclusive with `-d`) |
-| `--method` | `-m` | `GET` | HTTP method: `GET`, `POST`, `PUT`, `DELETE` |
+| `--method` | `-m` | `GET` | HTTP method: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS` |
 | `--header` | `-H` | -- | Custom header, repeatable (`-H 'K: V'`) |
 | `--body` | `-b` | -- | Request body string |
 | `--body-file` | `-B` | -- | Request body from file (mutually exclusive with `-b`) |
 | `--rate` | `-r` | -- | Target requests per second |
 | `--timeout` | `-t` | `30s` | Per-request timeout (`5s`, `1m`) |
+| `--latency-threshold` | | -- | Fail if p99 exceeds value (e.g. `100ms`), exit code 3 |
+| `--error-threshold` | | -- | Fail if error rate exceeds percentage (e.g. `1.0`) |
+| `--warm-up` | | -- | Exclude initial period from stats (e.g. `3s`) |
+| `--percentiles` | | `50,75,90,95,99,99.9` | Custom percentiles (comma-separated) |
+| `--auth` | | -- | Basic auth credentials (`user:password`) |
+| `--insecure` | `-k` | off | Skip TLS certificate verification |
 | `--no-tui` | | off | Disable TUI, print periodic status lines |
 | `--json` | `-j` | off | Output results as JSON (implies `--no-tui`) |
 | `--help` | `-h` | | Show help |
@@ -260,19 +309,27 @@ moon run src/cmd/main --target native -- -c 5 -d 3s http://localhost:8080/
 | Language | MoonBit | Rust | Go | Go |
 | HDR Histogram | Yes (3 sig fig) | Yes | No | Yes |
 | TUI | Yes | Yes | No | No |
-| HTTP methods | GET/POST/PUT/DELETE | All | All | All |
+| HTTP methods | All common (7) | All | All | All |
 | Scenarios | No | No | No | Yes (JS) |
 | Binary size | ~2.4 MB | ~3 MB | ~5 MB | ~40 MB |
 
 ## Roadmap
 
-- [x] `--rate` flag: fixed RPS with token bucket rate limiting
+- [x] `--rate` flag with absolute-deadline token bucket rate limiting
 - [x] Coordinated Omission correction
 - [x] `--timeout` per-request timeout enforcement
 - [x] `--body-file` for loading request body from file
 - [x] Error classification (timeout, connection refused, DNS error, TLS error)
-- [ ] Connection reconnection on server-side close
-- [ ] `--http2` HTTP/2 support
+- [x] `--latency-threshold` / `--error-threshold` SLA enforcement (exit code 3)
+- [x] `--warm-up` exclude initial requests from stats
+- [x] `--percentiles` custom percentile selection
+- [x] Time-series per-second snapshots in JSON output
+- [x] Response size tracking (total bytes, bytes/sec)
+- [x] `--auth` Basic authentication
+- [x] `--insecure` TLS verification skip (pending upstream support)
+- [x] PATCH, HEAD, OPTIONS HTTP methods
+- [x] Connection reconnection on server-side close
+- [ ] `--http2` HTTP/2 support (upstream PR #305 in progress)
 
 ## License
 

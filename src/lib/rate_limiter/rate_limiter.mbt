@@ -12,7 +12,7 @@ pub fn RateLimiter::new(rate : Int) -> RateLimiter {
 
 ///|
 /// Start the token filler task. Must be called inside a TaskGroup.
-/// Emits `rate` tokens per second at uniform intervals.
+/// Uses absolute deadline scheduling (oha pattern) to prevent cumulative drift.
 pub fn RateLimiter::start(
   self : RateLimiter,
   group : @async.TaskGroup[Unit],
@@ -22,9 +22,18 @@ pub fn RateLimiter::start(
   }
   let interval_ms = if 1000 / self.rate < 1 { 1 } else { 1000 / self.rate }
   group.spawn_bg(async fn() {
+    let start = @async.now()
+    let mut token_index : Int64 = 0L
     while true {
       self.queue.put(())
-      @async.sleep(interval_ms)
+      token_index = token_index + 1L
+      // Absolute deadline: start + token_index * interval
+      let next_deadline = start + token_index * interval_ms.to_int64()
+      let now = @async.now()
+      let wait = next_deadline - now
+      if wait > 0L {
+        @async.sleep(wait.to_int())
+      }
     }
   })
 }

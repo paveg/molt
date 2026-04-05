@@ -1,6 +1,7 @@
 import {
   "paveg/molt/src/lib/types",
   "paveg/molt/src/lib/duration",
+  "paveg/molt/src/lib/threshold",
   "paveg/molt/src/lib/coordinator",
   "paveg/molt/src/lib/reporter",
   "paveg/molt/src/lib/tui",

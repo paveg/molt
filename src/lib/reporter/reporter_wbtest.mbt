@@ -141,6 +141,9 @@ test "method_to_string all variants" {
   inspect(method_to_string(@types.HttpMethod::Post), content="POST")
   inspect(method_to_string(@types.HttpMethod::Put), content="PUT")
   inspect(method_to_string(@types.HttpMethod::Delete), content="DELETE")
+  inspect(method_to_string(@types.HttpMethod::Patch), content="PATCH")
+  inspect(method_to_string(@types.HttpMethod::Head), content="HEAD")
+  inspect(method_to_string(@types.HttpMethod::Options), content="OPTIONS")
 }
 
 ///|

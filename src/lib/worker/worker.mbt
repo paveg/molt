@@ -38,20 +38,18 @@ fn build_headers(pairs : Array[(String, String)]) -> Map[String, String] {
 
 ///|
 fn classify_error(msg : String) -> @types.RequestError {
-  if msg.contains("timeout") || msg.contains("Timeout") {
+  let lower = msg.to_lower()
+  if lower.contains("timeout") {
     @types.RequestError::Timeout
-  } else if msg.contains("refused") || msg.contains("Refused") {
+  } else if lower.contains("refused") {
     @types.RequestError::ConnectionRefused
-  } else if msg.contains("reset") || msg.contains("Reset") {
+  } else if lower.contains("reset") {
     @types.RequestError::ConnectionReset
-  } else if msg.contains("DNS") ||
-    msg.contains("dns") ||
-    msg.contains("resolve") {
+  } else if lower.contains("dns") || lower.contains("resolve") {
     @types.RequestError::DnsError
-  } else if msg.contains("TLS") ||
-    msg.contains("tls") ||
-    msg.contains("SSL") ||
-    msg.contains("certificate") {
+  } else if lower.contains("tls") ||
+    lower.contains("ssl") ||
+    lower.contains("certificate") {
     @types.RequestError::TlsError
   } else {
     @types.RequestError::Other(msg)
@@ -105,16 +103,11 @@ pub async fn run(
   let headers = build_headers(config.headers)
   let epoch_us = @bench.monotonic_clock_end(@bench.monotonic_clock_start()).to_int64()
   let use_co = config.latency_correction && rate_limiter is Some(_)
-  let rate = match config.rate {
-    Some(r) => r
-    None => 1
-  }
+  let rate = config.rate.unwrap_or(1)
   let mut request_index = 0
   while not(should_stop()) {
-    // Rate limiting
-    match rate_limiter {
-      Some(rl) => rl.acquire()
-      None => ()
+    if rate_limiter is Some(rl) {
+      rl.acquire()
     }
     // Compute scheduled time for CO correction
     let scheduled_us = if use_co {
@@ -131,22 +124,26 @@ pub async fn run(
     let start = @bench.monotonic_clock_start()
     let actual_start_us = @bench.monotonic_clock_end(start).to_int64()
     try {
+      let body_data = config.body.unwrap_or("")
       let result = @async.with_timeout_opt(config.timeout_ms, async fn() {
         match config.http_method {
           @types.HttpMethod::Get => client.get(path, extra_headers=headers)
-          @types.HttpMethod::Post => {
-            let body_data : String = match config.body {
-              Some(b) => b
-              None => ""
-            }
+          @types.HttpMethod::Post =>
             client.post(path, body_data, extra_headers=headers)
-          }
-          @types.HttpMethod::Put => {
-            let body_data : String = match config.body {
-              Some(b) => b
-              None => ""
-            }
+          @types.HttpMethod::Put =>
             client.put(path, body_data, extra_headers=headers)
+          @types.HttpMethod::Patch => {
+            client.request(@http.Patch, path, extra_headers=headers)
+            client.write(body_data)
+            client.end_request()
+          }
+          @types.HttpMethod::Head => {
+            client.request(@http.Head, path, extra_headers=headers)
+            client.end_request()
+          }
+          @types.HttpMethod::Options => {
+            client.request(@http.Options, path, extra_headers=headers)
+            client.end_request()
           }
           @types.HttpMethod::Delete => {
             client.request(@http.Delete, path, extra_headers=headers)
@@ -166,11 +163,16 @@ pub async fn run(
           } else {
             raw_elapsed
           }
+          let size_bytes = match response.headers.get("content-length") {
+            Some(v) => @strconv.parse_int64(v) catch { _ => 0L }
+            None => 0L
+          }
           on_result({
             status_code: response.code,
             latency_us,
             error: None,
             scheduled_time_us: scheduled_us,
+            response_size_bytes: size_bytes,
           })
           client.skip_response_body()
         }
@@ -181,6 +183,7 @@ pub async fn run(
             latency_us: raw_elapsed,
             error: Some(@types.RequestError::Timeout),
             scheduled_time_us: scheduled_us,
+            response_size_bytes: 0L,
           })
         }
       }
@@ -193,6 +196,7 @@ pub async fn run(
           latency_us: raw_elapsed,
           error: Some(error_type),
           scheduled_time_us: scheduled_us,
+          response_size_bytes: 0L,
         })
         // Reconnect: the client may be in a broken state after an error
         client.close()

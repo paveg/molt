@@ -1,11 +1,6 @@
 ///|
 async fn main {
   let config = parse_args() catch {
-    Failure::Failure(msg) => {
-      println("Error: \{msg}")
-      @sys.exit(1)
-      panic()
-    }
     err => {
       println("Error: \{err}")
       @sys.exit(1)
@@ -55,8 +50,66 @@ async fn main {
   } else {
     println(@reporter.report_text(stats))
   }
+  let threshold_result = @threshold.check(stats, config)
+  if not(threshold_result.passed) {
+    for v in threshold_result.violations {
+      println("THRESHOLD VIOLATION: \{v}")
+    }
+    @sys.exit(3)
+    panic()
+  }
   if stats.failed > 0 {
     @sys.exit(2)
+  }
+}
+
+///|
+fn parse_comma_separated(s : String) -> Array[String] {
+  let result : Array[String] = []
+  let buf = StringBuilder::new()
+  for c in s {
+    if c == ',' {
+      let part = buf.to_string()
+      if part.length() > 0 {
+        result.push(part)
+      }
+      buf.reset()
+    } else if c != ' ' {
+      buf.write_char(c)
+    }
+  }
+  let last = buf.to_string()
+  if last.length() > 0 {
+    result.push(last)
+  }
+  result
+}
+
+///|
+fn get_option_value(
+  matches : @argparse.Matches,
+  key : String,
+  default : String,
+) -> String {
+  match matches.values.get(key) {
+    Some(vals) => if vals.length() > 0 { vals[0] } else { default }
+    None => default
+  }
+}
+
+///|
+fn get_option_value_opt(matches : @argparse.Matches, key : String) -> String? {
+  match matches.values.get(key) {
+    Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
+    None => None
+  }
+}
+
+///|
+fn get_flag(matches : @argparse.Matches, key : String) -> Bool {
+  match matches.flags.get(key) {
+    Some(v) => v
+    None => false
   }
 }
 
@@ -90,7 +143,7 @@ fn parse_args() -> @types.Config raise {
         "method",
         short='m',
         long="method",
-        about="HTTP method (GET, POST, PUT, DELETE)",
+        about="HTTP method (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS)",
         default_values=["GET"],
       ),
       @argparse.OptionArg(
@@ -125,6 +178,31 @@ fn parse_args() -> @types.Config raise {
         about="Per-request timeout (e.g. 5s, 30s)",
         default_values=["30s"],
       ),
+      @argparse.OptionArg(
+        "percentiles",
+        long="percentiles",
+        about="Custom percentiles to compute (comma-separated, e.g. 50,90,99,99.99)",
+      ),
+      @argparse.OptionArg(
+        "latency-threshold",
+        long="latency-threshold",
+        about="Fail if p99 > value (e.g. 100ms)",
+      ),
+      @argparse.OptionArg(
+        "error-threshold",
+        long="error-threshold",
+        about="Fail if error rate > percentage (e.g. 1.0)",
+      ),
+      @argparse.OptionArg(
+        "warm-up",
+        long="warm-up",
+        about="Warm-up duration excluded from stats (e.g. 3s)",
+      ),
+      @argparse.OptionArg(
+        "auth",
+        long="auth",
+        about="Basic auth credentials (user:password)",
+      ),
     ],
     flags=[
       @argparse.FlagArg(
@@ -138,6 +216,12 @@ fn parse_args() -> @types.Config raise {
         long="json",
         about="Output results as JSON",
       ),
+      @argparse.FlagArg(
+        "insecure",
+        short='k',
+        long="insecure",
+        about="Skip TLS certificate verification",
+      ),
     ],
     positionals=[@argparse.PositionArg("url", about="Target URL")],
   )
@@ -145,55 +229,43 @@ fn parse_args() -> @types.Config raise {
   // argv[0] is the program name; argparse expects only the arguments
   let args = if argv.length() > 1 { argv[1:] } else { [][:] }
   let matches = cmd.parse(argv=args)
-  let url_values = matches.values.get("url")
-  guard url_values is Some(urls) && urls.length() > 0 else {
-    raise Failure::Failure("URL is required")
+  let url = match get_option_value_opt(matches, "url") {
+    Some(u) => u
+    None => raise Failure::Failure("URL is required")
   }
-  let url = url_values.unwrap()[0]
-  let conn_str = match matches.values.get("connections") {
-    Some(vals) => if vals.length() > 0 { vals[0] } else { "50" }
-    None => "50"
-  }
+  let conn_str = get_option_value(matches, "connections", "50")
   let connections = @strconv.parse_int(conn_str) catch { _ => 50 }
   if connections <= 0 {
     raise Failure::Failure("--connections must be a positive integer")
   }
-  let duration_val = matches.values.get("duration")
-  let requests_val = matches.values.get("requests")
+  let duration_val = get_option_value_opt(matches, "duration")
+  let requests_val = get_option_value_opt(matches, "requests")
   let mode : @types.TestMode = match (duration_val, requests_val) {
     (Some(_), Some(_)) =>
       raise Failure::Failure("Cannot specify both --duration and --requests")
-    (Some(d), None) =>
-      if d.length() > 0 {
-        let ms = @duration.parse(d[0]) catch { _ => 10000 }
-        @types.TestMode::Duration(ms)
-      } else {
-        @types.TestMode::Duration(10000)
+    (Some(d), None) => {
+      let ms = @duration.parse(d) catch { _ => 10000 }
+      @types.TestMode::Duration(ms)
+    }
+    (None, Some(r)) => {
+      let n = @strconv.parse_int(r) catch {
+        _ => raise Failure::Failure("Invalid request count")
       }
-    (None, Some(r)) =>
-      if r.length() > 0 {
-        let n = @strconv.parse_int(r[0]) catch {
-          _ => raise Failure::Failure("Invalid request count")
-        }
-        @types.TestMode::RequestCount(n)
-      } else {
-        @types.TestMode::Duration(10000)
-      }
+      @types.TestMode::RequestCount(n)
+    }
     (None, None) => @types.TestMode::Duration(10000)
   }
-  // Parse HTTP method
-  let method_str = match matches.values.get("method") {
-    Some(vals) => if vals.length() > 0 { vals[0] } else { "GET" }
-    None => "GET"
-  }
+  let method_str = get_option_value(matches, "method", "GET")
   let http_method = match method_str.to_upper() {
     "GET" => @types.HttpMethod::Get
     "POST" => @types.HttpMethod::Post
     "PUT" => @types.HttpMethod::Put
     "DELETE" => @types.HttpMethod::Delete
+    "PATCH" => @types.HttpMethod::Patch
+    "HEAD" => @types.HttpMethod::Head
+    "OPTIONS" => @types.HttpMethod::Options
     _ => @types.HttpMethod::Get
   }
-  // Parse headers from -H "Key: Value" format
   let header_vals = match matches.values.get("header") {
     Some(vals) => vals
     None => []
@@ -202,18 +274,11 @@ fn parse_args() -> @types.Config raise {
   for h in header_vals {
     match @types.parse_header(h) {
       Some(pair) => headers.push(pair)
-      None => () // silently skip malformed headers
+      None => ()
     }
   }
-  // Parse body (--body and --body-file are mutually exclusive)
-  let body_val : String? = match matches.values.get("body") {
-    Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
-    None => None
-  }
-  let body_file_val : String? = match matches.values.get("body-file") {
-    Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
-    None => None
-  }
+  let body_val = get_option_value_opt(matches, "body")
+  let body_file_val = get_option_value_opt(matches, "body-file")
   let body : String? = match (body_val, body_file_val) {
     (Some(_), Some(_)) =>
       raise Failure::Failure("Cannot specify both --body and --body-file")
@@ -226,42 +291,75 @@ fn parse_args() -> @types.Config raise {
     }
     (None, None) => None
   }
-  // Parse rate
-  let rate : Int? = match matches.values.get("rate") {
-    Some(vals) =>
-      if vals.length() > 0 {
-        Some(
-          @strconv.parse_int(vals[0]) catch {
-            _ => raise Failure::Failure("Invalid rate value")
-          },
-        )
-      } else {
-        None
+  let rate : Int? = match get_option_value_opt(matches, "rate") {
+    Some(s) => {
+      let r = @strconv.parse_int(s) catch {
+        _ => raise Failure::Failure("Invalid rate value")
       }
-    None => None
-  }
-  match rate {
-    Some(r) =>
       if r <= 0 {
         raise Failure::Failure("--rate must be a positive integer")
       }
+      Some(r)
+    }
+    None => None
+  }
+  let timeout_str = get_option_value(matches, "timeout", "30s")
+  let timeout_ms = @duration.parse(timeout_str) catch { _ => 30000 }
+  let no_tui = get_flag(matches, "no-tui")
+  let json_output = get_flag(matches, "json")
+  let percentiles_val = get_option_value_opt(matches, "percentiles")
+  let percentiles : Array[Double] = match percentiles_val {
+    Some(s) => {
+      let parts = parse_comma_separated(s)
+      let result : Array[Double] = []
+      for p in parts {
+        let v = @strconv.parse_double(p) catch {
+          _ => raise Failure::Failure("Invalid percentile value: \{p}")
+        }
+        if v < 0.0 || v > 100.0 {
+          raise Failure::Failure("Percentile must be between 0 and 100: \{p}")
+        }
+        result.push(v)
+      }
+      result
+    }
+    None => [50.0, 75.0, 90.0, 95.0, 99.0, 99.9]
+  }
+  let latency_threshold_us : Int64? = match
+    get_option_value_opt(matches, "latency-threshold") {
+    Some(s) => {
+      let ms = @duration.parse(s) catch {
+        _ => raise Failure::Failure("Invalid latency threshold")
+      }
+      Some((ms * 1000).to_int64())
+    }
+    None => None
+  }
+  let error_threshold_pct : Double? = match
+    get_option_value_opt(matches, "error-threshold") {
+    Some(s) =>
+      Some(
+        @strconv.parse_double(s) catch {
+          _ => raise Failure::Failure("Invalid error threshold")
+        },
+      )
+    None => None
+  }
+  let warm_up_ms = match get_option_value_opt(matches, "warm-up") {
+    Some(s) => @duration.parse(s) catch { _ => 0 }
+    None => 0
+  }
+  match get_option_value_opt(matches, "auth") {
+    Some(creds) => {
+      if not(creds.contains(":")) {
+        raise Failure::Failure("--auth must be in user:password format")
+      }
+      let encoded = @types.base64_encode(creds)
+      headers.push(("Authorization", "Basic \{encoded}"))
+    }
     None => ()
   }
-  // Parse timeout
-  let timeout_str = match matches.values.get("timeout") {
-    Some(vals) => if vals.length() > 0 { vals[0] } else { "30s" }
-    None => "30s"
-  }
-  let timeout_ms = @duration.parse(timeout_str) catch { _ => 30000 }
-  // Parse flags
-  let no_tui = match matches.flags.get("no-tui") {
-    Some(v) => v
-    None => false
-  }
-  let json_output = match matches.flags.get("json") {
-    Some(v) => v
-    None => false
-  }
+  let insecure = get_flag(matches, "insecure")
   {
     url,
     connections,
@@ -274,5 +372,10 @@ fn parse_args() -> @types.Config raise {
     json_output,
     latency_correction: true,
     rate,
+    percentiles,
+    latency_threshold_us,
+    error_threshold_pct,
+    warm_up_ms,
+    insecure,
   }
 }
