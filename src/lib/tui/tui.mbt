@@ -96,11 +96,11 @@ pub fn render_tui_node(state : TuiState) -> @vnode.TuiNode {
     @vnode.text("molt v0.1.0 -- MoonBit HTTP Load Tester", bold=true, fg="cyan"),
     @vnode.text(""),
     // Target info
-    @components.stat("Target", state.url, label_width=12),
+    @components.stat("Target", state.url, label_width=14),
     @components.stat(
       "Connections",
       state.connections.to_string(),
-      label_width=12,
+      label_width=14,
     ),
     @vnode.text(""),
     // Progress bar
@@ -110,32 +110,26 @@ pub fn render_tui_node(state : TuiState) -> @vnode.TuiNode {
     ]),
     @vnode.text(""),
     // Live stats
-    @vnode.row([
-      @components.stat(
-        "Requests",
-        state.total_requests.to_string(),
-        label_width=12,
-      ),
-      @components.stat("RPS", state.current_rps.to_string(), label_width=8),
-    ]),
-    @vnode.row([
-      @components.stat("Success", state.successful.to_string(), label_width=12),
-      @components.stat("Failed", state.failed.to_string(), label_width=8),
-    ]),
+    @components.stat(
+      "Requests",
+      state.total_requests.to_string(),
+      label_width=14,
+    ),
+    @components.stat("RPS", state.current_rps.to_string(), label_width=14),
+    @components.stat("Success", state.successful.to_string(), label_width=14),
+    @components.stat("Failed", state.failed.to_string(), label_width=14),
     @vnode.text(""),
     // Latency
-    @vnode.row([
-      @components.stat(
-        "p50",
-        format_latency_display(state.p50_us),
-        label_width=12,
-      ),
-      @components.stat(
-        "p99",
-        format_latency_display(state.p99_us),
-        label_width=8,
-      ),
-    ]),
+    @components.stat(
+      "p50",
+      format_latency_display(state.p50_us),
+      label_width=14,
+    ),
+    @components.stat(
+      "p99",
+      format_latency_display(state.p99_us),
+      label_width=14,
+    ),
   ])
 }
 
