@@ -142,3 +142,23 @@ test "method_to_string all variants" {
   inspect(method_to_string(@types.HttpMethod::Put), content="PUT")
   inspect(method_to_string(@types.HttpMethod::Delete), content="DELETE")
 }
+
+///|
+test "json_escape quotes" {
+  inspect(json_escape("hello \"world\""), content="hello \\\"world\\\"")
+}
+
+///|
+test "json_escape backslash" {
+  inspect(json_escape("path\\to\\file"), content="path\\\\to\\\\file")
+}
+
+///|
+test "json_escape newlines" {
+  inspect(json_escape("line1\nline2"), content="line1\\nline2")
+}
+
+///|
+test "json_escape no special chars" {
+  inspect(json_escape("normal string"), content="normal string")
+}
