@@ -56,8 +56,16 @@ pub fn Histogram::new(
   highest_trackable : Int64,
   significant_figures : Int,
 ) -> Histogram {
+  let highest = if highest_trackable < 1L { 1L } else { highest_trackable }
+  let sig_figs = if significant_figures < 1 {
+    1
+  } else if significant_figures > 5 {
+    5
+  } else {
+    significant_figures
+  }
   let largest_value_with_single_unit_resolution = 2L * power_of_2(
-      @math.ceil(significant_figures.to_double() / @math.log10(2.0)).to_int(),
+      @math.ceil(sig_figs.to_double() / @math.log10(2.0)).to_int(),
     )
   let sub_bucket_count_magnitude = (
     @math.ceil(
@@ -75,7 +83,7 @@ pub fn Histogram::new(
   let sub_bucket_mask = (sub_bucket_count - 1).to_int64() << unit_magnitude
   let mut buckets = 1
   let mut smallest_untrackable = sub_bucket_count.to_int64() << unit_magnitude
-  while smallest_untrackable <= highest_trackable {
+  while smallest_untrackable <= highest {
     smallest_untrackable = smallest_untrackable << 1
     buckets = buckets + 1
   }
@@ -128,18 +136,22 @@ fn Histogram::value_from_index(
 
 ///|
 pub fn Histogram::record(self : Histogram, value : Int64) -> Unit {
-  let bucket = self.get_bucket_index(value)
-  let sub = self.get_sub_bucket_index(value, bucket)
+  let v = if value < 0L { 0L } else { value }
+  let bucket = self.get_bucket_index(v)
+  let sub = self.get_sub_bucket_index(v, bucket)
   let idx = self.counts_index(bucket, sub)
+  if idx < 0 || idx >= self.counts_len {
+    return
+  }
   self.counts[idx] = self.counts[idx] + 1L
   self.total_count = self.total_count + 1L
-  if value < self.min_value {
-    self.min_value = value
+  if v < self.min_value {
+    self.min_value = v
   }
-  if value > self.max_value {
-    self.max_value = value
+  if v > self.max_value {
+    self.max_value = v
   }
-  let fv = value.to_double()
+  let fv = v.to_double()
   self.sum = self.sum + fv
   self.sum_of_squares = self.sum_of_squares + fv * fv
 }

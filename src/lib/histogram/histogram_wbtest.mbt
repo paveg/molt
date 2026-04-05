@@ -57,3 +57,47 @@ test "reset already empty histogram" {
   inspect(h.total_count, content="0")
   inspect(h.max_value, content="0")
 }
+
+///|
+test "new with zero highest_trackable clamps to 1" {
+  let h = Histogram::new(0L, 3)
+  h.record(0L)
+  inspect(h.total_count, content="1")
+}
+
+///|
+test "new with negative highest_trackable clamps to 1" {
+  let h = Histogram::new(-100L, 3)
+  h.record(0L)
+  inspect(h.total_count, content="1")
+}
+
+///|
+test "new with zero significant_figures clamps to 1" {
+  let h = Histogram::new(100000L, 0)
+  h.record(100L)
+  inspect(h.total_count, content="1")
+}
+
+///|
+test "new with negative significant_figures clamps to 1" {
+  let h = Histogram::new(100000L, -5)
+  h.record(100L)
+  inspect(h.total_count, content="1")
+}
+
+///|
+test "record negative value clamps to zero" {
+  let h = Histogram::new(100000L, 3)
+  h.record(-500L)
+  inspect(h.total_count, content="1")
+  inspect(h.min_value, content="0")
+}
+
+///|
+test "record value exceeding range does not crash" {
+  let h = Histogram::new(1000L, 3)
+  h.record(999999999L)
+  // Should not crash — either records in highest bucket or silently drops
+  inspect(h.total_count >= 0L, content="true")
+}
