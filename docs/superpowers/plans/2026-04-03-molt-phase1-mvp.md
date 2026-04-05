@@ -1,6 +1,8 @@
 # molt Phase 1 MVP Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Retrospective note (2026-04-04):** All Phase 1 tasks have been completed and merged to main. This document now serves as documentation of what was built. Code examples below reflect the original plan; the actual implementation may differ in details (operator syntax, field names, moon.pkg format). See the source files for the canonical implementation.
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build the MVP of molt — a MoonBit native HTTP load testing CLI that can run concurrent GET requests against a URL and report latency statistics with HDR Histogram accuracy.
 
@@ -66,7 +68,7 @@ molt/
 
 This task sets up the skeleton so parallel worktree agents have a compilable base.
 
-- [ ] **Step 1: Initialize MoonBit project**
+- [x] **Step 1: Initialize MoonBit project**
 
 Run:
 ```bash
@@ -88,7 +90,7 @@ If the directory already has files, create `moon.mod.json` manually:
 }
 ```
 
-- [ ] **Step 2: Add dependencies**
+- [x] **Step 2: Add dependencies**
 
 Run:
 ```bash
@@ -97,22 +99,22 @@ moon add moonbitlang/async
 
 Verify `moon.mod.json` now contains `"deps": { "moonbitlang/async": "..." }`.
 
-- [ ] **Step 3: Create shared types package**
+- [x] **Step 3: Create shared types package**
 
 Create `src/lib/types/moon.pkg`:
-```
-```
+
+Empty file (no dependencies).
 
 Create `src/lib/types/types.mbt`:
 ```moonbit
 ///|
-pub enum TestMode {
+pub(all) enum TestMode {
   Duration(Int)
   RequestCount(Int)
 } derive(Show, Eq)
 
 ///|
-pub enum HttpMethod {
+pub(all) enum HttpMethod {
   Get
   Post
   Put
@@ -120,17 +122,17 @@ pub enum HttpMethod {
 } derive(Show, Eq)
 
 ///|
-pub struct Config {
-  pub url : String
-  pub connections : Int
-  pub mode : TestMode
-  pub method : HttpMethod
-  pub headers : Array[(String, String)]
-  pub body : String?
-  pub timeout_ms : Int
-  pub enable_tui : Bool
-  pub json_output : Bool
-  pub latency_correction : Bool
+pub(all) struct Config {
+  url : String
+  connections : Int
+  mode : TestMode
+  http_method : HttpMethod
+  headers : Array[(String, String)]
+  body : String?
+  timeout_ms : Int
+  enable_tui : Bool
+  json_output : Bool
+  latency_correction : Bool
 } derive(Show)
 
 ///|
@@ -139,7 +141,7 @@ pub fn Config::default_with_url(url : String) -> Config {
     url,
     connections: 50,
     mode: Duration(10000),
-    method: Get,
+    http_method: Get,
     headers: [],
     body: None,
     timeout_ms: 30000,
@@ -150,7 +152,7 @@ pub fn Config::default_with_url(url : String) -> Config {
 }
 
 ///|
-pub enum RequestError {
+pub(all) enum RequestError {
   Timeout
   ConnectionRefused
   ConnectionReset
@@ -160,47 +162,54 @@ pub enum RequestError {
 } derive(Show, Eq)
 
 ///|
-pub struct RequestResult {
-  pub status_code : Int
-  pub latency_us : Int64
-  pub error : RequestError?
+pub(all) struct RequestResult {
+  status_code : Int
+  latency_us : Int64
+  error : RequestError?
+  scheduled_time_us : Int64 // 0 when not using rate limiting
 } derive(Show)
 
 ///|
-pub struct LatencyStats {
-  pub p50_us : Int64
-  pub p75_us : Int64
-  pub p90_us : Int64
-  pub p95_us : Int64
-  pub p99_us : Int64
-  pub p99_9_us : Int64
-  pub max_us : Int64
-  pub min_us : Int64
-  pub mean_us : Double
-  pub stdev_us : Double
+pub(all) struct LatencyStats {
+  p50_us : Int64
+  p75_us : Int64
+  p90_us : Int64
+  p95_us : Int64
+  p99_us : Int64
+  p99_9_us : Int64
+  max_us : Int64
+  min_us : Int64
+  mean_us : Double
+  stdev_us : Double
 } derive(Show)
 
 ///|
-pub struct Stats {
-  pub total_requests : Int
-  pub successful : Int
-  pub failed : Int
-  pub total_time_ms : Double
-  pub requests_per_sec : Double
-  pub latency : LatencyStats
-  pub status_codes : Map[Int, Int]
-  pub errors : Map[String, Int]
+pub(all) struct Stats {
+  total_requests : Int
+  successful : Int
+  failed : Int
+  total_time_ms : Double
+  requests_per_sec : Double
+  latency : LatencyStats
+  status_codes : Map[Int, Int]
+  errors : Map[String, Int]
 } derive(Show)
 ```
 
-- [ ] **Step 4: Create all package moon.pkg files**
+- [x] **Step 4: Create all package moon.pkg files**
 
 Create `src/lib/duration/moon.pkg`:
 ```
+import {
+  "moonbitlang/core/strconv",
+}
 ```
 
 Create `src/lib/histogram/moon.pkg`:
 ```
+import {
+  "moonbitlang/core/math",
+}
 ```
 
 Create `src/lib/collector/moon.pkg`:
@@ -210,6 +219,8 @@ import {
   "paveg/molt/src/lib/histogram",
 }
 ```
+
+(Actual content matches plan.)
 
 Create `src/lib/reporter/moon.pkg`:
 ```
@@ -222,13 +233,14 @@ Create `src/lib/worker/moon.pkg`:
 ```
 import {
   "paveg/molt/src/lib/types",
-  "moonbitlang/async",
   "moonbitlang/async/http",
+  "moonbitlang/core/bench",
 }
 
 options(
   targets: {
     "worker.mbt": [ "native" ],
+    "worker_wbtest.mbt": [ "native" ],
   },
 )
 ```
@@ -239,7 +251,9 @@ import {
   "paveg/molt/src/lib/types",
   "paveg/molt/src/lib/worker",
   "paveg/molt/src/lib/collector",
+  "paveg/molt/src/lib/tui",
   "moonbitlang/async",
+  "moonbitlang/core/bench",
 }
 
 options(
@@ -256,18 +270,26 @@ import {
   "paveg/molt/src/lib/duration",
   "paveg/molt/src/lib/coordinator",
   "paveg/molt/src/lib/reporter",
+  "paveg/molt/src/lib/tui",
+  "mizchi/tui/vnode",
+  "mizchi/tui/io",
   "moonbitlang/async",
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/strconv",
+  "moonbitlang/core/env",
 }
 
 options(
   "is-main": true,
+  "supported-targets": "native",
+  link: { "native": { "cc-link-flags": ".mooncakes/mizchi/tui/src/io/tui_native.c" } },
   targets: {
     "main.mbt": [ "native" ],
   },
 )
 ```
 
-- [ ] **Step 5: Create placeholder source files**
+- [x] **Step 5: Create placeholder source files**
 
 Create `src/lib/duration/duration.mbt`:
 ```moonbit
@@ -333,7 +355,7 @@ fn main {
 }
 ```
 
-- [ ] **Step 6: Verify the project compiles**
+- [x] **Step 6: Verify the project compiles**
 
 Run:
 ```bash
@@ -342,7 +364,7 @@ moon check --target native
 
 Expected: no errors. If there are import path issues, fix the `moon.pkg` import paths.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -359,7 +381,7 @@ git commit -m "feat: scaffold project structure with shared types"
 
 **No dependencies on other molt packages.**
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `src/lib/duration/duration_wbtest.mbt`:
 ```moonbit
@@ -399,7 +421,7 @@ test "parse zero" {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 ```bash
@@ -408,7 +430,7 @@ moon test --package paveg/molt/src/lib/duration
 
 Expected: FAIL — `abort("not implemented")`
 
-- [ ] **Step 3: Implement duration parser**
+- [x] **Step 3: Implement duration parser**
 
 Replace `src/lib/duration/duration.mbt`:
 ```moonbit
@@ -463,7 +485,7 @@ pub fn parse(input : String) -> Int raise {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 ```bash
@@ -472,7 +494,7 @@ moon test --package paveg/molt/src/lib/duration
 
 Expected: all 7 tests PASS.
 
-- [ ] **Step 5: Add error case tests**
+- [x] **Step 5: Add error case tests**
 
 Add to `src/lib/duration/duration_wbtest.mbt`:
 ```moonbit
@@ -501,7 +523,7 @@ test "parse missing number before unit raises error" {
 }
 ```
 
-- [ ] **Step 6: Run all duration tests**
+- [x] **Step 6: Run all duration tests**
 
 Run:
 ```bash
@@ -510,7 +532,7 @@ moon test --package paveg/molt/src/lib/duration
 
 Expected: all 11 tests PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/lib/duration/
@@ -530,7 +552,7 @@ git commit -m "feat: implement duration parser with full test coverage"
 
 This is the most complex component. Gil Tene's algorithm uses a two-level indexing scheme: leading zero count determines the bucket, sub-bucket index provides resolution within that bucket.
 
-- [ ] **Step 1: Write failing whitebox tests for index math**
+- [x] **Step 1: Write failing whitebox tests for index math**
 
 Create `src/lib/histogram/histogram_wbtest.mbt`:
 ```moonbit
@@ -563,7 +585,7 @@ test "record multiple values" {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 ```bash
@@ -572,7 +594,7 @@ moon test --package paveg/molt/src/lib/histogram
 
 Expected: FAIL — `abort("not implemented")`
 
-- [ ] **Step 3: Implement HDR Histogram core**
+- [x] **Step 3: Implement HDR Histogram core**
 
 Replace `src/lib/histogram/histogram.mbt`:
 ```moonbit
@@ -602,23 +624,23 @@ fn clz64(value : Int64) -> Int {
   let mut v = value
   if v.land(0xFFFFFFFF00000000L) == 0L {
     n = n + 32
-    v = v.lsl(32)
+    v = v << 32
   }
   if v.land(0xFFFF000000000000L) == 0L {
     n = n + 16
-    v = v.lsl(16)
+    v = v << 16
   }
   if v.land(0xFF00000000000000L) == 0L {
     n = n + 8
-    v = v.lsl(8)
+    v = v << 8
   }
   if v.land(0xF000000000000000L) == 0L {
     n = n + 4
-    v = v.lsl(4)
+    v = v << 4
   }
   if v.land(0xC000000000000000L) == 0L {
     n = n + 2
-    v = v.lsl(2)
+    v = v << 2
   }
   if v.land(0x8000000000000000L) == 0L {
     n = n + 1
@@ -628,7 +650,7 @@ fn clz64(value : Int64) -> Int {
 
 ///|
 fn power_of_2(exp : Int) -> Int64 {
-  1L.lsl(exp)
+  1L << exp
 }
 
 ///|
@@ -652,15 +674,15 @@ pub fn Histogram::new(
   } else {
     0
   }
-  let sub_bucket_count = 1.lsl(sub_bucket_count_magnitude)
+  let sub_bucket_count = 1 << sub_bucket_count_magnitude
   let sub_bucket_half_count = sub_bucket_count / 2
-  let sub_bucket_mask = sub_bucket_count.to_int64().lsl(32).asr(32)
+  let sub_bucket_mask = (sub_bucket_count.to_int64() << 32).asr(32)
   let unit_magnitude = 0
   // Determine bucket count needed
   let mut buckets = 1
-  let mut smallest_untrackable = sub_bucket_count.to_int64().lsl(unit_magnitude)
+  let mut smallest_untrackable = sub_bucket_count.to_int64() << unit_magnitude
   while smallest_untrackable <= highest_trackable {
-    smallest_untrackable = smallest_untrackable.lsl(1)
+    smallest_untrackable = smallest_untrackable << 1
     buckets = buckets + 1
   }
   let counts_len = (buckets + 1) * (sub_bucket_half_count)
@@ -711,7 +733,7 @@ fn Histogram::value_from_index(
   bucket : Int,
   sub : Int,
 ) -> Int64 {
-  sub.to_int64().lsl(bucket + self.unit_magnitude)
+  sub.to_int64() << (bucket + self.unit_magnitude)
 }
 
 ///|
@@ -813,7 +835,7 @@ pub fn Histogram::reset(self : Histogram) -> Unit {
 }
 ```
 
-- [ ] **Step 4: Run whitebox tests**
+- [x] **Step 4: Run whitebox tests**
 
 Run:
 ```bash
@@ -822,7 +844,7 @@ moon test --package paveg/molt/src/lib/histogram
 
 Expected: all 3 whitebox tests PASS.
 
-- [ ] **Step 5: Add blackbox percentile accuracy tests**
+- [x] **Step 5: Add blackbox percentile accuracy tests**
 
 Create `src/lib/histogram/histogram_test.mbt`:
 ```moonbit
@@ -914,7 +936,7 @@ test "large values within range" {
 }
 ```
 
-- [ ] **Step 6: Run all histogram tests**
+- [x] **Step 6: Run all histogram tests**
 
 Run:
 ```bash
@@ -923,7 +945,7 @@ moon test --package paveg/molt/src/lib/histogram
 
 Expected: all 11 tests PASS. If percentile accuracy tests fail, adjust the bucket math. The HDR Histogram should be accurate to 3 significant figures, so p50 of [1..1000] should be within 0.1% of 500.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/lib/histogram/
@@ -939,7 +961,7 @@ git commit -m "feat: implement Gil Tene HDR Histogram with percentile accuracy"
 
 Config validation logic lives with the Config type. Tests verify defaults and mutual exclusion rules.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `src/lib/types/types_test.mbt`:
 ```moonbit
@@ -948,7 +970,7 @@ test "default config has correct defaults" {
   let c = @types.Config::default_with_url("https://example.com")
   inspect(c.connections, content="50")
   inspect(c.mode, content="Duration(10000)")
-  inspect(c.method, content="Get")
+  inspect(c.http_method, content="Get")
   inspect(c.timeout_ms, content="30000")
   inspect(c.enable_tui, content="true")
   inspect(c.json_output, content="false")
@@ -956,7 +978,7 @@ test "default config has correct defaults" {
 }
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 Run:
 ```bash
@@ -965,7 +987,7 @@ moon test --package paveg/molt/src/lib/types
 
 Expected: PASS (the default constructor already exists).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/lib/types/
@@ -982,7 +1004,7 @@ git commit -m "feat: add config validation tests"
 
 The Collector aggregates `RequestResult` values into `Stats`. For Phase 1 MVP, it operates synchronously (no Queue yet — that comes with the async Coordinator integration).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `src/lib/collector/collector_test.mbt`:
 ```moonbit
@@ -993,6 +1015,7 @@ test "collect single successful result" {
     status_code: 200,
     latency_us: 5000L,
     error: None,
+    scheduled_time_us: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="1")
@@ -1008,6 +1031,7 @@ test "collect mixed results" {
       status_code: 200,
       latency_us: 1000L,
       error: None,
+      scheduled_time_us: 0L,
     })
   }
   for _ in 0..<10 {
@@ -1015,6 +1039,7 @@ test "collect mixed results" {
       status_code: 500,
       latency_us: 5000L,
       error: None,
+      scheduled_time_us: 0L,
     })
   }
   let stats = c.finalize(1000.0)
@@ -1032,11 +1057,13 @@ test "collect error results" {
     status_code: 0,
     latency_us: 0L,
     error: Some(@types.RequestError::Timeout),
+    scheduled_time_us: 0L,
   })
   c.record(@types.RequestResult::{
     status_code: 0,
     latency_us: 0L,
     error: Some(@types.RequestError::ConnectionRefused),
+    scheduled_time_us: 0L,
   })
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="2")
@@ -1053,6 +1080,7 @@ test "latency stats are computed" {
       status_code: 200,
       latency_us: (i * 100).to_int64(),
       error: None,
+      scheduled_time_us: 0L,
     })
   }
   let stats = c.finalize(1000.0)
@@ -1063,7 +1091,7 @@ test "latency stats are computed" {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 ```bash
@@ -1072,7 +1100,7 @@ moon test --package paveg/molt/src/lib/collector
 
 Expected: FAIL — placeholder implementation.
 
-- [ ] **Step 3: Implement Collector**
+- [x] **Step 3: Implement Collector**
 
 Replace `src/lib/collector/collector.mbt`:
 ```moonbit
@@ -1103,13 +1131,19 @@ pub fn Collector::record(self : Collector, result : @types.RequestResult) -> Uni
     Some(err) => {
       self.failed = self.failed + 1
       let key = err.to_string()
-      let count = self.errors.get(key).or(0)
+      let count = match self.errors.get(key) {
+        Some(c) => c
+        None => 0
+      }
       self.errors[key] = count + 1
     }
     None => {
       self.histogram.record(result.latency_us)
       let code = result.status_code
-      let count = self.status_codes.get(code).or(0)
+      let count = match self.status_codes.get(code) {
+        Some(c) => c
+        None => 0
+      }
       self.status_codes[code] = count + 1
     }
   }
@@ -1149,7 +1183,7 @@ pub fn Collector::finalize(self : Collector, total_time_ms : Double) -> @types.S
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 ```bash
@@ -1158,7 +1192,7 @@ moon test --package paveg/molt/src/lib/collector
 
 Expected: all 4 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/collector/
@@ -1173,7 +1207,7 @@ git commit -m "feat: implement Collector with HDR Histogram-based stats aggregat
 - Modify: `src/lib/reporter/reporter.mbt`
 - Create: `src/lib/reporter/reporter_test.mbt`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `src/lib/reporter/reporter_test.mbt`:
 ```moonbit
@@ -1232,7 +1266,7 @@ test "report_text contains errors" {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 ```bash
@@ -1241,7 +1275,7 @@ moon test --package paveg/molt/src/lib/reporter
 
 Expected: FAIL — `abort("not implemented")`
 
-- [ ] **Step 3: Implement text reporter**
+- [x] **Step 3: Implement text reporter**
 
 Replace `src/lib/reporter/reporter.mbt`:
 ```moonbit
@@ -1316,7 +1350,7 @@ pub fn report_text(stats : @types.Stats) -> String {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 ```bash
@@ -1325,7 +1359,7 @@ moon test --package paveg/molt/src/lib/reporter
 
 Expected: all 4 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/reporter/
@@ -1341,7 +1375,7 @@ git commit -m "feat: implement text summary reporter"
 
 The Worker is an async function that sends HTTP requests in a loop and sends results to a callback. For Phase 1, we implement the core loop. Testing happens at the integration level (Task 8) since it requires a live HTTP server.
 
-- [ ] **Step 1: Implement Worker**
+- [x] **Step 1: Implement Worker**
 
 Replace `src/lib/worker/worker.mbt`:
 ```moonbit
@@ -1363,6 +1397,7 @@ pub async fn run(
           status_code: response.code,
           latency_us: elapsed_us.to_int64(),
           error: None,
+          scheduled_time_us: 0L,
         },
       )
       client.skip_response_body()
@@ -1374,6 +1409,7 @@ pub async fn run(
             status_code: 0,
             latency_us: elapsed_us.to_int64(),
             error: Some(@types.RequestError::Other("request failed")),
+            scheduled_time_us: 0L,
           },
         )
       }
@@ -1383,7 +1419,7 @@ pub async fn run(
 }
 ```
 
-- [ ] **Step 2: Verify compilation**
+- [x] **Step 2: Verify compilation**
 
 Run:
 ```bash
@@ -1392,7 +1428,7 @@ moon check --target native
 
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/lib/worker/
@@ -1408,7 +1444,7 @@ git commit -m "feat: implement async HTTP worker loop"
 
 The Coordinator wires everything together: spawns workers, collects results, enforces termination.
 
-- [ ] **Step 1: Implement Coordinator**
+- [x] **Step 1: Implement Coordinator**
 
 Replace `src/lib/coordinator/coordinator.mbt`:
 ```moonbit
@@ -1449,7 +1485,7 @@ pub async fn run(config : @types.Config) -> @types.Stats {
 }
 ```
 
-- [ ] **Step 2: Add `total_requests` accessor to Collector**
+- [x] **Step 2: Add `total_requests` accessor to Collector**
 
 Add to `src/lib/collector/collector.mbt`:
 ```moonbit
@@ -1459,7 +1495,7 @@ pub fn Collector::total_requests(self : Collector) -> Int {
 }
 ```
 
-- [ ] **Step 3: Verify compilation**
+- [x] **Step 3: Verify compilation**
 
 Run:
 ```bash
@@ -1468,7 +1504,7 @@ moon check --target native
 
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/lib/coordinator/ src/lib/collector/
@@ -1482,7 +1518,7 @@ git commit -m "feat: implement Coordinator with TaskGroup-based worker managemen
 **Files:**
 - Modify: `src/cmd/main/main.mbt`
 
-- [ ] **Step 1: Implement CLI parser and main**
+- [x] **Step 1: Implement CLI parser and main**
 
 Replace `src/cmd/main/main.mbt`:
 ```moonbit
@@ -1533,14 +1569,16 @@ fn parse_args() -> @types.Config raise {
     ],
   )
   let matches = cmd.parse()
-  let url_values = matches.values.get("url").or([])
-  guard url_values.length() > 0 else {
-    abort("URL is required")
+  let url_values = matches.values.get("url")
+  guard url_values is Some(urls) && urls.length() > 0 else {
+    raise Failure::Failure("URL is required")
   }
-  let url = url_values[0]
-  let connections = @strconv.parse_int(
-    matches.values.get("connections").or(["50"])[0],
-  ) catch { _ => 50 }
+  let url = url_values.unwrap()[0]
+  let conn_str = match matches.values.get("connections") {
+    Some(vals) => if vals.length() > 0 { vals[0] } else { "50" }
+    None => "50"
+  }
+  let connections = @strconv.parse_int(conn_str) catch { _ => 50 }
   // Determine test mode
   let duration_val = matches.values.get("duration")
   let requests_val = matches.values.get("requests")
@@ -1569,7 +1607,7 @@ fn parse_args() -> @types.Config raise {
     url,
     connections,
     mode,
-    method: @types.HttpMethod::Get,
+    http_method: @types.HttpMethod::Get,
     headers: [],
     body: None,
     timeout_ms: 30000,
@@ -1580,7 +1618,7 @@ fn parse_args() -> @types.Config raise {
 }
 ```
 
-- [ ] **Step 2: Verify compilation**
+- [x] **Step 2: Verify compilation**
 
 Run:
 ```bash
@@ -1589,7 +1627,7 @@ moon check --target native
 
 Expected: no errors.
 
-- [ ] **Step 3: Build native binary**
+- [x] **Step 3: Build native binary**
 
 Run:
 ```bash
@@ -1598,7 +1636,7 @@ moon build --target native
 
 Expected: binary produced in `_build/native/debug/build/`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/cmd/main/
@@ -1614,7 +1652,7 @@ git commit -m "feat: implement CLI entry point with argparse"
 
 Uses `@http.Server` to start a local HTTP server and runs the Coordinator against it.
 
-- [ ] **Step 1: Write integration test**
+- [x] **Step 1: Write integration test**
 
 Create `src/lib/coordinator/coordinator_test.mbt`:
 ```moonbit
@@ -1644,7 +1682,7 @@ async test "coordinator runs against local server" {
         url: "http://127.0.0.1:\{port}",
         connections: 2,
         mode: @types.TestMode::Duration(1000),
-        method: @types.HttpMethod::Get,
+        http_method: @types.HttpMethod::Get,
         headers: [],
         body: None,
         timeout_ms: 5000,
@@ -1664,7 +1702,7 @@ async test "coordinator runs against local server" {
 }
 ```
 
-- [ ] **Step 2: Update coordinator moon.pkg for test imports**
+- [x] **Step 2: Update coordinator moon.pkg for test imports**
 
 Update `src/lib/coordinator/moon.pkg` to add test-only imports:
 ```
@@ -1672,7 +1710,9 @@ import {
   "paveg/molt/src/lib/types",
   "paveg/molt/src/lib/worker",
   "paveg/molt/src/lib/collector",
+  "paveg/molt/src/lib/tui",
   "moonbitlang/async",
+  "moonbitlang/core/bench",
 }
 
 import {
@@ -1688,7 +1728,7 @@ options(
 )
 ```
 
-- [ ] **Step 3: Run integration test**
+- [x] **Step 3: Run integration test**
 
 Run:
 ```bash
@@ -1702,7 +1742,7 @@ If the test fails, common issues:
 - `@http.Server` constructor or `run_forever` API may differ — check the actual source
 - Worker may need URL path parsing fixes
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/lib/coordinator/
@@ -1713,14 +1753,14 @@ git commit -m "test: add integration test with local HTTP server"
 
 ### Task 10: Manual Smoke Test
 
-- [ ] **Step 1: Build the binary**
+- [x] **Step 1: Build the binary**
 
 Run:
 ```bash
 moon build --target native
 ```
 
-- [ ] **Step 2: Run against a public endpoint**
+- [x] **Step 2: Run against a public endpoint**
 
 Run:
 ```bash
@@ -1745,9 +1785,9 @@ Summary:
 
 If the binary path is different, check `find _build -type f -perm +111` to locate it.
 
-- [ ] **Step 3: Fix any issues discovered during manual testing**
+- [x] **Step 3: Fix any issues discovered during manual testing**
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 ```bash
 git add -A
