@@ -44,9 +44,14 @@ fn classify_error(msg : String) -> @types.RequestError {
     @types.RequestError::ConnectionRefused
   } else if msg.contains("reset") || msg.contains("Reset") {
     @types.RequestError::ConnectionReset
-  } else if msg.contains("DNS") || msg.contains("dns") || msg.contains("resolve") {
+  } else if msg.contains("DNS") ||
+    msg.contains("dns") ||
+    msg.contains("resolve") {
     @types.RequestError::DnsError
-  } else if msg.contains("TLS") || msg.contains("tls") || msg.contains("SSL") || msg.contains("certificate") {
+  } else if msg.contains("TLS") ||
+    msg.contains("tls") ||
+    msg.contains("SSL") ||
+    msg.contains("certificate") {
     @types.RequestError::TlsError
   } else {
     @types.RequestError::Other(msg)
@@ -66,7 +71,9 @@ fn compute_scheduled_time(
   }
   let interval_us = 1000000L / rate.to_int64()
   let stride_us = interval_us * num_workers.to_int64()
-  epoch_us + request_index.to_int64() * stride_us + worker_id.to_int64() * interval_us
+  epoch_us +
+  request_index.to_int64() * stride_us +
+  worker_id.to_int64() * interval_us
 }
 
 ///|
@@ -77,7 +84,11 @@ fn compute_corrected_latency(
 ) -> Int64 {
   let delay = actual_start_us - scheduled_us
   let corrected = if delay > 0L { elapsed_us + delay } else { elapsed_us }
-  if corrected < 0L { 0L } else { corrected }
+  if corrected < 0L {
+    0L
+  } else {
+    corrected
+  }
 }
 
 ///|
@@ -85,9 +96,9 @@ pub async fn run(
   config : @types.Config,
   on_result : (@types.RequestResult) -> Unit,
   should_stop : () -> Bool,
-  rate_limiter~ : @rate_limiter.RateLimiter? = None,
-  worker_id~ : Int = 0,
-  num_workers~ : Int = 1,
+  rate_limiter? : @rate_limiter.RateLimiter? = None,
+  worker_id? : Int = 0,
+  num_workers? : Int = 1,
 ) -> Unit {
   let (base_url, path) = parse_url(config.url)
   let mut client = @http.Client::new(base_url)
@@ -107,7 +118,13 @@ pub async fn run(
     }
     // Compute scheduled time for CO correction
     let scheduled_us = if use_co {
-      compute_scheduled_time(epoch_us~, request_index~, rate~, worker_id~, num_workers~)
+      compute_scheduled_time(
+        epoch_us~,
+        request_index~,
+        rate~,
+        worker_id~,
+        num_workers~,
+      )
     } else {
       0L
     }
@@ -116,8 +133,7 @@ pub async fn run(
     try {
       let result = @async.with_timeout_opt(config.timeout_ms, async fn() {
         match config.http_method {
-          @types.HttpMethod::Get =>
-            client.get(path, extra_headers=headers)
+          @types.HttpMethod::Get => client.get(path, extra_headers=headers)
           @types.HttpMethod::Post => {
             let body_data : String = match config.body {
               Some(b) => b
@@ -142,29 +158,42 @@ pub async fn run(
         Some(response) => {
           let raw_elapsed = @bench.monotonic_clock_end(start).to_int64()
           let latency_us = if use_co {
-            compute_corrected_latency(elapsed_us=raw_elapsed, scheduled_us~, actual_start_us~)
+            compute_corrected_latency(
+              elapsed_us=raw_elapsed,
+              scheduled_us~,
+              actual_start_us~,
+            )
           } else {
             raw_elapsed
           }
-          on_result(
-            { status_code: response.code, latency_us, error: None, scheduled_time_us: scheduled_us },
-          )
+          on_result({
+            status_code: response.code,
+            latency_us,
+            error: None,
+            scheduled_time_us: scheduled_us,
+          })
           client.skip_response_body()
         }
         None => {
           let raw_elapsed = @bench.monotonic_clock_end(start).to_int64()
-          on_result(
-            { status_code: 0, latency_us: raw_elapsed, error: Some(@types.RequestError::Timeout), scheduled_time_us: scheduled_us },
-          )
+          on_result({
+            status_code: 0,
+            latency_us: raw_elapsed,
+            error: Some(@types.RequestError::Timeout),
+            scheduled_time_us: scheduled_us,
+          })
         }
       }
     } catch {
       err => {
         let raw_elapsed = @bench.monotonic_clock_end(start).to_int64()
         let error_type = classify_error(err.to_string())
-        on_result(
-          { status_code: 0, latency_us: raw_elapsed, error: Some(error_type), scheduled_time_us: scheduled_us },
-        )
+        on_result({
+          status_code: 0,
+          latency_us: raw_elapsed,
+          error: Some(error_type),
+          scheduled_time_us: scheduled_us,
+        })
         // Reconnect: the client may be in a broken state after an error
         client.close()
         client = @http.Client::new(base_url)

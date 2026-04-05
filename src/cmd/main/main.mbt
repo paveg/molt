@@ -49,7 +49,7 @@ async fn main {
   } else {
     None
   }
-  let stats = @coordinator.run(config, tui_callbacks=tui_callbacks)
+  let stats = @coordinator.run(config, tui_callbacks~)
   if config.json_output {
     println(@reporter.report_json(config, stats))
   } else {
@@ -127,8 +127,17 @@ fn parse_args() -> @types.Config raise {
       ),
     ],
     flags=[
-      @argparse.FlagArg("no-tui", long="no-tui", about="Disable TUI, use plain output"),
-      @argparse.FlagArg("json", short='j', long="json", about="Output results as JSON"),
+      @argparse.FlagArg(
+        "no-tui",
+        long="no-tui",
+        about="Disable TUI, use plain output",
+      ),
+      @argparse.FlagArg(
+        "json",
+        short='j',
+        long="json",
+        about="Output results as JSON",
+      ),
     ],
     positionals=[@argparse.PositionArg("url", about="Target URL")],
   )
@@ -145,11 +154,7 @@ fn parse_args() -> @types.Config raise {
     Some(vals) => if vals.length() > 0 { vals[0] } else { "50" }
     None => "50"
   }
-  let connections = try {
-    @strconv.parse_int(conn_str)
-  } catch {
-    _ => 50
-  }
+  let connections = @strconv.parse_int(conn_str) catch { _ => 50 }
   if connections <= 0 {
     raise Failure::Failure("--connections must be a positive integer")
   }
@@ -160,20 +165,14 @@ fn parse_args() -> @types.Config raise {
       raise Failure::Failure("Cannot specify both --duration and --requests")
     (Some(d), None) =>
       if d.length() > 0 {
-        let ms = try {
-          @duration.parse(d[0])
-        } catch {
-          _ => 10000
-        }
+        let ms = @duration.parse(d[0]) catch { _ => 10000 }
         @types.TestMode::Duration(ms)
       } else {
         @types.TestMode::Duration(10000)
       }
     (None, Some(r)) =>
       if r.length() > 0 {
-        let n = try {
-          @strconv.parse_int(r[0])
-        } catch {
+        let n = @strconv.parse_int(r[0]) catch {
           _ => raise Failure::Failure("Invalid request count")
         }
         @types.TestMode::RequestCount(n)
@@ -220,9 +219,7 @@ fn parse_args() -> @types.Config raise {
       raise Failure::Failure("Cannot specify both --body and --body-file")
     (Some(b), None) => Some(b)
     (None, Some(path)) => {
-      let content = try {
-        @fs.read_file_to_string(path)
-      } catch {
+      let content = @fs.read_file_to_string(path) catch {
         _ => raise Failure::Failure("Failed to read body file: \{path}")
       }
       Some(content)
@@ -234,9 +231,7 @@ fn parse_args() -> @types.Config raise {
     Some(vals) =>
       if vals.length() > 0 {
         Some(
-          try {
-            @strconv.parse_int(vals[0])
-          } catch {
+          @strconv.parse_int(vals[0]) catch {
             _ => raise Failure::Failure("Invalid rate value")
           },
         )
@@ -257,7 +252,7 @@ fn parse_args() -> @types.Config raise {
     Some(vals) => if vals.length() > 0 { vals[0] } else { "30s" }
     None => "30s"
   }
-  let timeout_ms = try { @duration.parse(timeout_str) } catch { _ => 30000 }
+  let timeout_ms = @duration.parse(timeout_str) catch { _ => 30000 }
   // Parse flags
   let no_tui = match matches.flags.get("no-tui") {
     Some(v) => v

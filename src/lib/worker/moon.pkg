@@ -7,8 +7,5 @@ import {
 }
 
 options(
-  targets: {
-    "worker.mbt": [ "native" ],
-    "worker_wbtest.mbt": [ "native" ],
-  },
+  targets: { "worker.mbt": [ "native" ], "worker_wbtest.mbt": [ "native" ] },
 )

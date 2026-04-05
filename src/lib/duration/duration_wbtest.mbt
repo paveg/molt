@@ -35,49 +35,49 @@ test "parse 0s" {
 
 ///|
 test "empty raises" {
-  let r = try { Ok(parse("")) } catch { e => Err(e) }
+  let r = Ok(parse("")) catch { e => Err(e) }
   inspect(r is Err(_), content="true")
 }
 
 ///|
 test "no unit raises" {
-  let r = try { Ok(parse("123")) } catch { e => Err(e) }
+  let r = Ok(parse("123")) catch { e => Err(e) }
   inspect(r is Err(_), content="true")
 }
 
 ///|
 test "invalid char raises" {
-  let r = try { Ok(parse("10x")) } catch { e => Err(e) }
+  let r = Ok(parse("10x")) catch { e => Err(e) }
   inspect(r is Err(_), content="true")
 }
 
 ///|
 test "missing number raises" {
-  let r = try { Ok(parse("s")) } catch { e => Err(e) }
+  let r = Ok(parse("s")) catch { e => Err(e) }
   inspect(r is Err(_), content="true")
 }
 
 ///|
 test "overflow hours raises" {
-  let r = try { Ok(parse("999999h")) } catch { e => Err(e) }
+  let r = Ok(parse("999999h")) catch { e => Err(e) }
   inspect(r is Err(_), content="true")
 }
 
 ///|
 test "overflow minutes raises" {
-  let r = try { Ok(parse("99999999m")) } catch { e => Err(e) }
+  let r = Ok(parse("99999999m")) catch { e => Err(e) }
   inspect(r is Err(_), content="true")
 }
 
 ///|
 test "overflow seconds raises" {
-  let r = try { Ok(parse("9999999999s")) } catch { e => Err(e) }
+  let r = Ok(parse("9999999999s")) catch { e => Err(e) }
   inspect(r is Err(_), content="true")
 }
 
 ///|
 test "max safe duration does not overflow" {
   // 596 hours = 596 * 3600000 = 2_145_600_000 (within Int range)
-  let r = try { Ok(parse("596h")) } catch { e => Err(e) }
+  let r = Ok(parse("596h")) catch { e => Err(e) }
   inspect(r is Ok(_), content="true")
 }

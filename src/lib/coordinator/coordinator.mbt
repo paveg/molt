@@ -9,7 +9,7 @@ pub(all) struct TuiCallbacks {
 ///|
 pub async fn run(
   config : @types.Config,
-  tui_callbacks~ : TuiCallbacks? = None,
+  tui_callbacks? : TuiCallbacks? = None,
 ) -> @types.Stats {
   let collector = @collector.Collector::new()
   let mut stopped = false
@@ -18,7 +18,11 @@ pub async fn run(
     @types.TestMode::Duration(ms) => ms
     @types.TestMode::RequestCount(_) => 0
   }
-  let tui_state = @tui.TuiState::new(config.url, config.connections, duration_ms)
+  let tui_state = @tui.TuiState::new(
+    config.url,
+    config.connections,
+    duration_ms,
+  )
   // Initialize TUI
   match tui_callbacks {
     Some(cb) => (cb.on_init)()
@@ -72,11 +76,10 @@ pub async fn run(
     // Wait for termination condition
     match config.mode {
       @types.TestMode::Duration(ms) => @async.sleep(ms)
-      @types.TestMode::RequestCount(n) => {
+      @types.TestMode::RequestCount(n) =>
         while collector.total_requests() < n {
           @async.sleep(10)
         }
-      }
     }
     stopped = true
   })

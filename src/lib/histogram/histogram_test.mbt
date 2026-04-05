@@ -1,7 +1,7 @@
 ///|
 test "percentile with uniform distribution" {
   let h = @histogram.Histogram::new(100000L, 3)
-  for i in 1..=1000 {
+  for i in 1..<=1000 {
     h.record(i.to_int64())
   }
   let p50 = h.percentile(50.0)
@@ -32,7 +32,7 @@ test "percentile with identical values" {
 ///|
 test "mean and stdev" {
   let h = @histogram.Histogram::new(100000L, 3)
-  for i in 1..=100 {
+  for i in 1..<=100 {
     h.record(i.to_int64())
   }
   let mean = h.mean()
@@ -84,7 +84,7 @@ test "large values within range" {
 ///|
 test "percentile 0 returns min" {
   let h = @histogram.Histogram::new(100000L, 3)
-  for i in 1..=100 {
+  for i in 1..<=100 {
     h.record(i.to_int64())
   }
   let p0 = h.percentile(0.0)
@@ -95,7 +95,7 @@ test "percentile 0 returns min" {
 ///|
 test "percentile 100 returns max" {
   let h = @histogram.Histogram::new(100000L, 3)
-  for i in 1..=100 {
+  for i in 1..<=100 {
     h.record(i.to_int64())
   }
   let p100 = h.percentile(100.0)

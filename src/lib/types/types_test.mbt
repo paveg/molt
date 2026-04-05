@@ -47,10 +47,7 @@ test "parse_header no space after colon returns None" {
 
 ///|
 test "parse_header empty value after colon-space" {
-  inspect(
-    @types.parse_header("X-Empty: "),
-    content="Some((\"X-Empty\", \"\"))",
-  )
+  inspect(@types.parse_header("X-Empty: "), content="Some((\"X-Empty\", \"\"))")
 }
 
 ///|
@@ -73,10 +70,7 @@ test "parse_header empty string returns None" {
 
 ///|
 test "parse_header only colon-space prefix yields empty key" {
-  inspect(
-    @types.parse_header(": value"),
-    content="Some((\"\", \"value\"))",
-  )
+  inspect(@types.parse_header(": value"), content="Some((\"\", \"value\"))")
 }
 
 ///|

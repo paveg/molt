@@ -9,7 +9,5 @@ import {
 }
 
 options(
-  targets: {
-    "coordinator.mbt": [ "native" ],
-  },
+  targets: { "coordinator.mbt": [ "native" ] },
 )

@@ -20,7 +20,9 @@ pub fn parse(input : String) -> Int raise {
         let num_str = input[num_start:i].to_string()
         let n = @strconv.parse_int(num_str) catch {
           _ =>
-            raise InvalidDuration("invalid number \"\{num_str}\" in \"\{input}\"")
+            raise InvalidDuration(
+              "invalid number \"\{num_str}\" in \"\{input}\"",
+            )
         }
         let multiplier = match c {
           'h' => 3600000
@@ -37,8 +39,7 @@ pub fn parse(input : String) -> Int raise {
         has_unit = true
       }
       '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => ()
-      _ =>
-        raise InvalidDuration("unexpected character '\{c}' in \"\{input}\"")
+      _ => raise InvalidDuration("unexpected character '\{c}' in \"\{input}\"")
     }
   }
   guard has_unit else {

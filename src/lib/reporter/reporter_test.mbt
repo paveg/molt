@@ -116,10 +116,7 @@ test "report_json contains config section" {
   let stats = make_test_stats()
   let json = @reporter.report_json(config, stats)
   inspect(json.contains("\"config\""), content="true")
-  inspect(
-    json.contains("\"url\": \"https://example.com/api\""),
-    content="true",
-  )
+  inspect(json.contains("\"url\": \"https://example.com/api\""), content="true")
   inspect(json.contains("\"connections\": 50"), content="true")
 }
 
@@ -230,7 +227,18 @@ test "report_json with empty status codes" {
     failed: 0,
     total_time_ms: 0.0,
     requests_per_sec: 0.0,
-    latency: { p50_us: 0L, p75_us: 0L, p90_us: 0L, p95_us: 0L, p99_us: 0L, p99_9_us: 0L, max_us: 0L, min_us: 0L, mean_us: 0.0, stdev_us: 0.0 },
+    latency: {
+      p50_us: 0L,
+      p75_us: 0L,
+      p90_us: 0L,
+      p95_us: 0L,
+      p99_us: 0L,
+      p99_9_us: 0L,
+      max_us: 0L,
+      min_us: 0L,
+      mean_us: 0.0,
+      stdev_us: 0.0,
+    },
     status_codes: {},
     errors: {},
   }

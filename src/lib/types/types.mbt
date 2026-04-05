@@ -99,9 +99,20 @@ pub fn LatencyStats::new(
   max_us~ : Int64,
   min_us~ : Int64,
   mean_us~ : Double,
-  stdev_us~ : Double
+  stdev_us~ : Double,
 ) -> LatencyStats {
-  { p50_us, p75_us, p90_us, p95_us, p99_us, p99_9_us, max_us, min_us, mean_us, stdev_us }
+  {
+    p50_us,
+    p75_us,
+    p90_us,
+    p95_us,
+    p99_us,
+    p99_9_us,
+    max_us,
+    min_us,
+    mean_us,
+    stdev_us,
+  }
 }
 
 ///|
@@ -145,7 +156,16 @@ pub fn Stats::new(
   requests_per_sec~ : Double,
   latency~ : LatencyStats,
   status_codes~ : Map[Int, Int],
-  errors~ : Map[String, Int]
+  errors~ : Map[String, Int],
 ) -> Stats {
-  { total_requests, successful, failed, total_time_ms, requests_per_sec, latency, status_codes, errors }
+  {
+    total_requests,
+    successful,
+    failed,
+    total_time_ms,
+    requests_per_sec,
+    latency,
+    status_codes,
+    errors,
+  }
 }

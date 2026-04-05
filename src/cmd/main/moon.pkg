@@ -16,9 +16,9 @@ import {
 
 options(
   "is-main": true,
-  "supported-targets": "native",
-  link: { "native": { "cc-link-flags": ".mooncakes/mizchi/tui/src/io/tui_native.c" } },
-  targets: {
-    "main.mbt": [ "native" ],
+  link: {
+    "native": { "cc-link-flags": ".mooncakes/mizchi/tui/src/io/tui_native.c" },
   },
+  "supported-targets": "native",
+  targets: { "main.mbt": [ "native" ] },
 )

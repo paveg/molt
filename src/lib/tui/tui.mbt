@@ -13,7 +13,11 @@ pub struct TuiState {
 }
 
 ///|
-pub fn TuiState::new(url : String, connections : Int, duration_ms : Int) -> TuiState {
+pub fn TuiState::new(
+  url : String,
+  connections : Int,
+  duration_ms : Int,
+) -> TuiState {
   {
     url,
     connections,
@@ -55,25 +59,25 @@ pub fn TuiState::update(
 pub fn TuiState::progress_ratio(self : TuiState) -> Double {
   guard self.duration_ms > 0 else { return 0.0 }
   let ratio = self.elapsed_ms / self.duration_ms.to_double()
-  if ratio > 1.0 { 1.0 } else { ratio }
+  if ratio > 1.0 {
+    1.0
+  } else {
+    ratio
+  }
 }
 
 ///|
 fn format_latency_display(us : Int64) -> String {
   let ms_whole = us / 1000L
-  let ms_frac = (us % 1000L) / 10L
-  let frac_str = if ms_frac < 10L {
-    "0\{ms_frac}"
-  } else {
-    "\{ms_frac}"
-  }
+  let ms_frac = us % 1000L / 10L
+  let frac_str = if ms_frac < 10L { "0\{ms_frac}" } else { "\{ms_frac}" }
   "\{ms_whole}.\{frac_str}ms"
 }
 
 ///|
 fn format_elapsed_display(ms : Double) -> String {
   let sec_whole = (ms / 1000.0).to_int()
-  let sec_frac = ((ms % 1000.0) / 100.0).to_int()
+  let sec_frac = (ms % 1000.0 / 100.0).to_int()
   "\{sec_whole}.\{sec_frac}s"
 }
 
@@ -93,7 +97,11 @@ pub fn render_tui_node(state : TuiState) -> @vnode.TuiNode {
     @vnode.text(""),
     // Target info
     @components.stat("Target", state.url, label_width=12),
-    @components.stat("Connections", state.connections.to_string(), label_width=12),
+    @components.stat(
+      "Connections",
+      state.connections.to_string(),
+      label_width=12,
+    ),
     @vnode.text(""),
     // Progress bar
     @vnode.row([
@@ -103,7 +111,11 @@ pub fn render_tui_node(state : TuiState) -> @vnode.TuiNode {
     @vnode.text(""),
     // Live stats
     @vnode.row([
-      @components.stat("Requests", state.total_requests.to_string(), label_width=12),
+      @components.stat(
+        "Requests",
+        state.total_requests.to_string(),
+        label_width=12,
+      ),
       @components.stat("RPS", state.current_rps.to_string(), label_width=8),
     ]),
     @vnode.row([
@@ -113,14 +125,26 @@ pub fn render_tui_node(state : TuiState) -> @vnode.TuiNode {
     @vnode.text(""),
     // Latency
     @vnode.row([
-      @components.stat("p50", format_latency_display(state.p50_us), label_width=12),
-      @components.stat("p99", format_latency_display(state.p99_us), label_width=8),
+      @components.stat(
+        "p50",
+        format_latency_display(state.p50_us),
+        label_width=12,
+      ),
+      @components.stat(
+        "p99",
+        format_latency_display(state.p99_us),
+        label_width=8,
+      ),
     ]),
   ])
 }
 
 ///|
-pub fn render_tui_to_string(state : TuiState, width : Int, height : Int) -> String {
+pub fn render_tui_to_string(
+  state : TuiState,
+  width : Int,
+  height : Int,
+) -> String {
   let node = render_tui_node(state)
   @vnode.render_vnode_once(width, height, node)
 }

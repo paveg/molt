@@ -19,7 +19,10 @@ pub fn Collector::new() -> Collector {
 }
 
 ///|
-pub fn Collector::record(self : Collector, result : @types.RequestResult) -> Unit {
+pub fn Collector::record(
+  self : Collector,
+  result : @types.RequestResult,
+) -> Unit {
   self.total_requests = self.total_requests + 1
   match result.error {
     Some(err) => {
@@ -63,7 +66,10 @@ pub fn Collector::live_percentile(self : Collector, p : Double) -> Int64 {
 }
 
 ///|
-pub fn Collector::finalize(self : Collector, total_time_ms : Double) -> @types.Stats {
+pub fn Collector::finalize(
+  self : Collector,
+  total_time_ms : Double,
+) -> @types.Stats {
   let successful = self.total_requests - self.failed
   let rps = if total_time_ms > 0.0 {
     successful.to_double() / (total_time_ms / 1000.0)

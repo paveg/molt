@@ -7,7 +7,7 @@ import {
 options(
   targets: {
     "tui.mbt": [ "native" ],
-    "tui_wbtest.mbt": [ "native" ],
     "tui_test.mbt": [ "native" ],
+    "tui_wbtest.mbt": [ "native" ],
   },
 )

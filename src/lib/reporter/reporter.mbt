@@ -1,7 +1,7 @@
 ///|
 fn format_us_as_ms(us : Int64) -> String {
   let ms_whole = us / 1000L
-  let ms_frac = (us % 1000L) / 10L
+  let ms_frac = us % 1000L / 10L
   "\{ms_whole}.\{ms_frac}ms"
 }
 
@@ -24,7 +24,7 @@ fn format_rps(rps : Double) -> String {
 ///|
 fn format_time(ms : Double) -> String {
   let whole = (ms / 1000.0).to_int()
-  let frac = ((ms % 1000.0) / 10.0).to_int()
+  let frac = (ms % 1000.0 / 10.0).to_int()
   "\{whole}.\{frac}s"
 }
 
@@ -78,9 +78,7 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
     @types.TestMode::Duration(ms) => ms.to_double() / 1000.0
     @types.TestMode::RequestCount(_) => 0.0
   }
-  buf.write_string(
-    "    \"duration_sec\": \{format_double(duration_sec)},\n",
-  )
+  buf.write_string("    \"duration_sec\": \{format_double(duration_sec)},\n")
   match config.rate {
     Some(r) => buf.write_string("    \"rate_rps\": \{r},\n")
     None => buf.write_string("    \"rate_rps\": null,\n")
@@ -129,9 +127,7 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
   buf.write_string(
     "    \"min_ms\": \{format_double(lat.min_us.to_double() / 1000.0)},\n",
   )
-  buf.write_string(
-    "    \"mean_ms\": \{format_double(lat.mean_us / 1000.0)},\n",
-  )
+  buf.write_string("    \"mean_ms\": \{format_double(lat.mean_us / 1000.0)},\n")
   buf.write_string(
     "    \"stdev_ms\": \{format_double(lat.stdev_us / 1000.0)}\n",
   )
@@ -174,7 +170,9 @@ pub fn report_text(stats : @types.Stats) -> String {
     "  Failed:            \{stats.failed} (\{format_percentage(stats.failed, stats.total_requests)})\n",
   )
   buf.write_string("  Total time:        \{format_time(stats.total_time_ms)}\n")
-  buf.write_string("  Requests/sec:      \{format_rps(stats.requests_per_sec)}\n")
+  buf.write_string(
+    "  Requests/sec:      \{format_rps(stats.requests_per_sec)}\n",
+  )
   buf.write_string("\n")
   buf.write_string("Latency Distribution:\n")
   let lat = stats.latency
