@@ -167,7 +167,7 @@ test "report_json with RequestCount mode" {
     url: "https://example.com",
     connections: 10,
     mode: @types.TestMode::RequestCount(5000),
-    method: @types.HttpMethod::Post,
+    http_method: @types.HttpMethod::Post,
     headers: [],
     body: Some("{\"key\":\"value\"}"),
     timeout_ms: 30000,

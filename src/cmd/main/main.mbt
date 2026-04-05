@@ -9,7 +9,7 @@ async fn main {
   if not(config.json_output) && not(config.enable_tui) {
     println("molt v0.1.0 -- MoonBit HTTP Load Tester\n")
     println("Target:       \{config.url}")
-    println("Method:       \{config.method}")
+    println("Method:       \{config.http_method}")
     println("Connections:  \{config.connections}")
     match config.mode {
       @types.TestMode::Duration(ms) => println("Duration:     \{ms / 1000}s")
@@ -189,7 +189,7 @@ fn parse_args() -> @types.Config raise {
     url,
     connections,
     mode,
-    method: http_method,
+    http_method,
     headers,
     body,
     timeout_ms: 30000,

@@ -1,9 +1,9 @@
 ///|
 /// Callback interface for TUI updates during test execution.
 pub(all) struct TuiCallbacks {
-  pub on_update : (@tui.TuiState) -> Unit
-  pub on_init : () -> Unit
-  pub on_cleanup : () -> Unit
+  on_update : (@tui.TuiState) -> Unit
+  on_init : () -> Unit
+  on_cleanup : () -> Unit
 }
 
 ///|

@@ -41,8 +41,8 @@ fn format_double(v : Double) -> String {
 }
 
 ///|
-fn method_to_string(method : @types.HttpMethod) -> String {
-  match method {
+fn method_to_string(http_method : @types.HttpMethod) -> String {
+  match http_method {
     @types.HttpMethod::Get => "GET"
     @types.HttpMethod::Post => "POST"
     @types.HttpMethod::Put => "PUT"
@@ -66,7 +66,7 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
     "    \"duration_sec\": \{format_double(duration_sec)},\n",
   )
   buf.write_string(
-    "    \"method\": \"\{method_to_string(config.method)}\"\n",
+    "    \"method\": \"\{method_to_string(config.http_method)}\"\n",
   )
   buf.write_string("  },\n")
   // "summary" section

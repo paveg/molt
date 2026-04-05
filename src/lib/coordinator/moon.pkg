@@ -2,7 +2,6 @@ import {
   "paveg/molt/src/lib/types",
   "paveg/molt/src/lib/worker",
   "paveg/molt/src/lib/collector",
-  "paveg/molt/src/lib/rate_limiter",
   "paveg/molt/src/lib/tui",
   "moonbitlang/async",
   "moonbitlang/core/bench",

@@ -1,9 +1,6 @@
 import {
-  "paveg/molt/src/lib/types",
-  "paveg/molt/src/lib/collector",
   "mizchi/tui/vnode",
   "mizchi/tui/components",
-  "moonbitlang/async",
   "moonbitlang/core/bench",
 }
 

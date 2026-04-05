@@ -48,7 +48,7 @@ pub async fn run(
   while not(should_stop()) {
     let start = @bench.monotonic_clock_start()
     try {
-      let response = match config.method {
+      let response = match config.http_method {
         @types.HttpMethod::Get =>
           client.get(path, extra_headers=headers)
         @types.HttpMethod::Post => {

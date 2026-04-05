@@ -120,7 +120,7 @@ pub fn render_tui_node(state : TuiState) -> @vnode.TuiNode {
 }
 
 ///|
-fn render_tui_to_string(state : TuiState, width : Int, height : Int) -> String {
+pub fn render_tui_to_string(state : TuiState, width : Int, height : Int) -> String {
   let node = render_tui_node(state)
   @vnode.render_vnode_once(width, height, node)
 }

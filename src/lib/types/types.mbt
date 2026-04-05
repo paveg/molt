@@ -14,16 +14,16 @@ pub(all) enum HttpMethod {
 
 ///|
 pub(all) struct Config {
-  pub url : String
-  pub connections : Int
-  pub mode : TestMode
-  pub method : HttpMethod
-  pub headers : Array[(String, String)]
-  pub body : String?
-  pub timeout_ms : Int
-  pub enable_tui : Bool
-  pub json_output : Bool
-  pub latency_correction : Bool
+  url : String
+  connections : Int
+  mode : TestMode
+  http_method : HttpMethod
+  headers : Array[(String, String)]
+  body : String?
+  timeout_ms : Int
+  enable_tui : Bool
+  json_output : Bool
+  latency_correction : Bool
 } derive(Show)
 
 ///|
@@ -32,7 +32,7 @@ pub fn Config::default_with_url(url : String) -> Config {
     url,
     connections: 50,
     mode: Duration(10000),
-    method: Get,
+    http_method: Get,
     headers: [],
     body: None,
     timeout_ms: 30000,
@@ -54,36 +54,36 @@ pub(all) enum RequestError {
 
 ///|
 pub(all) struct RequestResult {
-  pub status_code : Int
-  pub latency_us : Int64
-  pub error : RequestError?
-  pub scheduled_time_us : Int64 // 0 when not using rate limiting
+  status_code : Int
+  latency_us : Int64
+  error : RequestError?
+  scheduled_time_us : Int64 // 0 when not using rate limiting
 } derive(Show)
 
 ///|
 pub(all) struct LatencyStats {
-  pub p50_us : Int64
-  pub p75_us : Int64
-  pub p90_us : Int64
-  pub p95_us : Int64
-  pub p99_us : Int64
-  pub p99_9_us : Int64
-  pub max_us : Int64
-  pub min_us : Int64
-  pub mean_us : Double
-  pub stdev_us : Double
+  p50_us : Int64
+  p75_us : Int64
+  p90_us : Int64
+  p95_us : Int64
+  p99_us : Int64
+  p99_9_us : Int64
+  max_us : Int64
+  min_us : Int64
+  mean_us : Double
+  stdev_us : Double
 } derive(Show)
 
 ///|
 pub(all) struct Stats {
-  pub total_requests : Int
-  pub successful : Int
-  pub failed : Int
-  pub total_time_ms : Double
-  pub requests_per_sec : Double
-  pub latency : LatencyStats
-  pub status_codes : Map[Int, Int]
-  pub errors : Map[String, Int]
+  total_requests : Int
+  successful : Int
+  failed : Int
+  total_time_ms : Double
+  requests_per_sec : Double
+  latency : LatencyStats
+  status_codes : Map[Int, Int]
+  errors : Map[String, Int]
 } derive(Show)
 
 ///|
