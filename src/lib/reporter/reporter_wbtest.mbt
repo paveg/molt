@@ -162,3 +162,23 @@ test "json_escape newlines" {
 test "json_escape no special chars" {
   inspect(json_escape("normal string"), content="normal string")
 }
+
+///|
+test "json_escape tab" {
+  inspect(json_escape("col1\tcol2"), content="col1\\tcol2")
+}
+
+///|
+test "json_escape carriage return" {
+  inspect(json_escape("line1\rline2"), content="line1\\rline2")
+}
+
+///|
+test "json_escape empty string" {
+  inspect(json_escape(""), content="")
+}
+
+///|
+test "json_escape consecutive special chars" {
+  inspect(json_escape("\"\\\n"), content="\\\"\\\\\\n")
+}

@@ -155,11 +155,27 @@ test "compute_corrected_latency early send" {
 
 ///|
 test "compute_corrected_latency clamps negative to zero" {
-  // Edge case: if elapsed_us is somehow negative (clock issue)
   let corrected = compute_corrected_latency(
     elapsed_us=-100L, scheduled_us=1000L, actual_start_us=900L,
   )
   inspect(corrected >= 0L, content="true")
+}
+
+///|
+test "compute_corrected_latency very large delay" {
+  // Server was extremely slow, 10 second delay
+  let corrected = compute_corrected_latency(
+    elapsed_us=5000L, scheduled_us=0L, actual_start_us=10000000L,
+  )
+  inspect(corrected, content="10005000")
+}
+
+///|
+test "compute_corrected_latency zero elapsed zero delay" {
+  let corrected = compute_corrected_latency(
+    elapsed_us=0L, scheduled_us=1000L, actual_start_us=1000L,
+  )
+  inspect(corrected, content="0")
 }
 
 ///|

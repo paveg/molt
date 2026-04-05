@@ -62,3 +62,22 @@ test "overflow hours raises" {
   let r = try { Ok(parse("999999h")) } catch { e => Err(e) }
   inspect(r is Err(_), content="true")
 }
+
+///|
+test "overflow minutes raises" {
+  let r = try { Ok(parse("99999999m")) } catch { e => Err(e) }
+  inspect(r is Err(_), content="true")
+}
+
+///|
+test "overflow seconds raises" {
+  let r = try { Ok(parse("9999999999s")) } catch { e => Err(e) }
+  inspect(r is Err(_), content="true")
+}
+
+///|
+test "max safe duration does not overflow" {
+  // 596 hours = 596 * 3600000 = 2_145_600_000 (within Int range)
+  let r = try { Ok(parse("596h")) } catch { e => Err(e) }
+  inspect(r is Ok(_), content="true")
+}
