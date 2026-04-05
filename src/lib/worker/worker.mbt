@@ -90,6 +90,28 @@ fn compute_corrected_latency(
 }
 
 ///|
+async fn follow_redirects(
+  response : @http.Response,
+  max_redirects : Int,
+  extra_headers : Array[(String, String)],
+) -> @http.Response {
+  let mut current = response
+  let mut remaining = max_redirects
+  let headers = build_headers(extra_headers)
+  while remaining > 0 && current.code >= 300 && current.code < 400 {
+    match current.headers.get("location") {
+      Some(loc) => {
+        let (resp, _data) = @http.get(loc, headers~)
+        current = resp
+        remaining = remaining - 1
+      }
+      None => break
+    }
+  }
+  current
+}
+
+///|
 pub async fn run(
   config : @types.Config,
   on_result : (@types.RequestResult) -> Unit,
@@ -153,34 +175,58 @@ pub async fn run(
       })
       match result {
         Some(response) => {
-          let raw_elapsed = @bench.monotonic_clock_end(start).to_int64()
-          let latency_us = if use_co {
+          let ttfb_raw = @bench.monotonic_clock_end(start).to_int64()
+          let ttfb_us = if use_co {
             compute_corrected_latency(
-              elapsed_us=raw_elapsed,
+              elapsed_us=ttfb_raw,
               scheduled_us~,
               actual_start_us~,
             )
           } else {
-            raw_elapsed
+            ttfb_raw
           }
-          let size_bytes = match response.headers.get("content-length") {
+          client.skip_response_body()
+          // Follow redirects if configured
+          let final_response = if config.max_redirects > 0 &&
+            response.code >= 300 &&
+            response.code < 400 {
+            follow_redirects(response, config.max_redirects, config.headers)
+          } else {
+            response
+          }
+          let size_bytes = match final_response.headers.get("content-length") {
             Some(v) => @strconv.parse_int64(v) catch { _ => 0L }
             None => 0L
           }
+          let total_raw = @bench.monotonic_clock_end(start).to_int64()
+          let latency_us = if use_co {
+            compute_corrected_latency(
+              elapsed_us=total_raw,
+              scheduled_us~,
+              actual_start_us~,
+            )
+          } else {
+            total_raw
+          }
           on_result({
-            status_code: response.code,
+            status_code: final_response.code,
             latency_us,
+            ttfb_us,
             error: None,
             scheduled_time_us: scheduled_us,
             response_size_bytes: size_bytes,
           })
-          client.skip_response_body()
+          if config.disable_keepalive {
+            client.close()
+            client = @http.Client::new(base_url)
+          }
         }
         None => {
           let raw_elapsed = @bench.monotonic_clock_end(start).to_int64()
           on_result({
             status_code: 0,
             latency_us: raw_elapsed,
+            ttfb_us: 0L,
             error: Some(@types.RequestError::Timeout),
             scheduled_time_us: scheduled_us,
             response_size_bytes: 0L,
@@ -194,6 +240,7 @@ pub async fn run(
         on_result({
           status_code: 0,
           latency_us: raw_elapsed,
+          ttfb_us: 0L,
           error: Some(error_type),
           scheduled_time_us: scheduled_us,
           response_size_bytes: 0L,

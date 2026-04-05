@@ -101,3 +101,22 @@ test "record value exceeding range does not crash" {
   // Should not crash — either records in highest bucket or silently drops
   inspect(h.total_count >= 0L, content="true")
 }
+
+///|
+test "record out of range tracks in dropped_count" {
+  let h = Histogram::new(1000L, 3)
+  h.record(999999L)
+  inspect(h.dropped_count, content="1")
+  inspect(h.total_count, content="1")
+  inspect(h.max_value, content="999999")
+}
+
+///|
+test "record out of range preserves mean" {
+  let h = Histogram::new(1000L, 3)
+  h.record(100L)
+  h.record(999999L) // out of range
+  inspect(h.total_count, content="2")
+  // mean should include the out-of-range value
+  inspect(h.mean() > 100.0, content="true")
+}

@@ -10,6 +10,7 @@ pub(all) struct TuiCallbacks {
 pub async fn run(
   config : @types.Config,
   tui_callbacks? : TuiCallbacks? = None,
+  on_result? : ((@types.RequestResult) -> Unit)? = None,
 ) -> @types.Stats {
   let collector = @collector.Collector::new()
   let time_series : Array[@types.TimeSeriesPoint] = []
@@ -89,7 +90,12 @@ pub async fn run(
       group.spawn_bg(async fn() {
         @worker.run(
           config,
-          fn(result) { collector.record(result) },
+          fn(result) {
+            collector.record(result)
+            if on_result is Some(cb) {
+              cb(result)
+            }
+          },
           fn() { stopped },
           rate_limiter=limiter,
           worker_id=i,

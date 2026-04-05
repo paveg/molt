@@ -7,8 +7,8 @@ Simple HTTP load testing CLI built with MoonBit native backend.
 ```sh
 moon build --target native          # build
 moon build --target native --release # release build (~2.3MB)
-moon test                           # wasm-gc tests (152)
-moon test --target native           # all tests including native-only (208)
+moon test                           # wasm-gc tests
+moon test --target native           # all tests including native-only (220+)
 moon fmt                            # format
 moon check --target native          # type check
 ```

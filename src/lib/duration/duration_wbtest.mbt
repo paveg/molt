@@ -81,3 +81,45 @@ test "max safe duration does not overflow" {
   let r = Ok(parse("596h")) catch { e => Err(e) }
   inspect(r is Ok(_), content="true")
 }
+
+///|
+test "parse_count 10k" {
+  inspect(parse_count("10k"), content="10000")
+}
+
+///|
+test "parse_count 1m" {
+  inspect(parse_count("1m"), content="1000000")
+}
+
+///|
+test "parse_count 100 no suffix" {
+  inspect(parse_count("100"), content="100")
+}
+
+///|
+test "parse_count 0k" {
+  inspect(parse_count("0k"), content="0")
+}
+
+///|
+test "parse_count empty raises" {
+  let r = Ok(parse_count("")) catch { e => Err(e) }
+  inspect(r is Err(_), content="true")
+}
+
+///|
+test "parse_count invalid suffix raises" {
+  let r = Ok(parse_count("10x")) catch { e => Err(e) }
+  inspect(r is Err(_), content="true")
+}
+
+///|
+test "parse_count uppercase K" {
+  inspect(parse_count("5K"), content="5000")
+}
+
+///|
+test "parse_count uppercase M" {
+  inspect(parse_count("2M"), content="2000000")
+}

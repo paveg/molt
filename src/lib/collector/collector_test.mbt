@@ -4,6 +4,7 @@ test "collect single successful result" {
   c.record({
     status_code: 200,
     latency_us: 5000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -21,6 +22,7 @@ test "collect mixed results" {
     c.record({
       status_code: 200,
       latency_us: 1000L,
+      ttfb_us: 0L,
       error: None,
       scheduled_time_us: 0L,
       response_size_bytes: 0L,
@@ -30,6 +32,7 @@ test "collect mixed results" {
     c.record({
       status_code: 500,
       latency_us: 5000L,
+      ttfb_us: 0L,
       error: None,
       scheduled_time_us: 0L,
       response_size_bytes: 0L,
@@ -49,6 +52,7 @@ test "collect error results" {
   c.record({
     status_code: 0,
     latency_us: 0L,
+    ttfb_us: 0L,
     error: Some(@types.RequestError::Timeout),
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -56,6 +60,7 @@ test "collect error results" {
   c.record({
     status_code: 0,
     latency_us: 0L,
+    ttfb_us: 0L,
     error: Some(@types.RequestError::ConnectionRefused),
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -72,6 +77,7 @@ test "latency stats are computed" {
     c.record({
       status_code: 200,
       latency_us: (i * 100).to_int64(),
+      ttfb_us: 0L,
       error: None,
       scheduled_time_us: 0L,
       response_size_bytes: 0L,
@@ -92,6 +98,7 @@ test "finalize with zero time" {
   c.record({
     status_code: 200,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -108,6 +115,7 @@ test "all requests failed" {
     c.record({
       status_code: 0,
       latency_us: 0L,
+      ttfb_us: 0L,
       error: Some(@types.RequestError::Timeout),
       scheduled_time_us: 0L,
       response_size_bytes: 0L,
@@ -125,6 +133,7 @@ test "zero latency successful request" {
   c.record({
     status_code: 200,
     latency_us: 0L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -141,6 +150,7 @@ test "multiple error types accumulated" {
   c.record({
     status_code: 0,
     latency_us: 0L,
+    ttfb_us: 0L,
     error: Some(@types.RequestError::Timeout),
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -148,6 +158,7 @@ test "multiple error types accumulated" {
   c.record({
     status_code: 0,
     latency_us: 0L,
+    ttfb_us: 0L,
     error: Some(@types.RequestError::Timeout),
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -155,6 +166,7 @@ test "multiple error types accumulated" {
   c.record({
     status_code: 0,
     latency_us: 0L,
+    ttfb_us: 0L,
     error: Some(@types.RequestError::ConnectionReset),
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -187,6 +199,7 @@ test "coordinated omission correction uses scheduled_time" {
   c.record({
     status_code: 200,
     latency_us: 10000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -196,6 +209,7 @@ test "coordinated omission correction uses scheduled_time" {
   c.record({
     status_code: 200,
     latency_us: 5000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 10000L,
     response_size_bytes: 0L,
@@ -213,6 +227,7 @@ test "scheduled_time_us zero means no correction" {
   c.record({
     status_code: 200,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -220,6 +235,7 @@ test "scheduled_time_us zero means no correction" {
   c.record({
     status_code: 200,
     latency_us: 2000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -235,6 +251,7 @@ test "5xx status codes counted as failed" {
   c.record({
     status_code: 500,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -242,6 +259,7 @@ test "5xx status codes counted as failed" {
   c.record({
     status_code: 503,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -249,6 +267,7 @@ test "5xx status codes counted as failed" {
   c.record({
     status_code: 200,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -265,6 +284,7 @@ test "499 is not counted as server error" {
   c.record({
     status_code: 499,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -280,6 +300,7 @@ test "500 boundary" {
   c.record({
     status_code: 500,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -305,6 +326,7 @@ test "custom percentiles computed" {
     c.record({
       status_code: 200,
       latency_us: i.to_int64(),
+      ttfb_us: 0L,
       error: None,
       scheduled_time_us: 0L,
       response_size_bytes: 0L,
@@ -326,6 +348,7 @@ test "custom percentiles values are reasonable" {
     c.record({
       status_code: 200,
       latency_us: i.to_int64(),
+      ttfb_us: 0L,
       error: None,
       scheduled_time_us: 0L,
       response_size_bytes: 0L,
@@ -345,6 +368,7 @@ test "default percentiles when none specified" {
   c.record({
     status_code: 200,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -360,6 +384,7 @@ test "response size accumulated" {
   c.record({
     status_code: 200,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 1024L,
@@ -367,6 +392,7 @@ test "response size accumulated" {
   c.record({
     status_code: 200,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 2048L,
@@ -381,6 +407,7 @@ test "bytes per sec computed" {
   c.record({
     status_code: 200,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 5000L,
@@ -396,6 +423,7 @@ test "bytes per sec zero when no time" {
   c.record({
     status_code: 200,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 5000L,
@@ -410,6 +438,7 @@ test "error requests still accumulate bytes" {
   c.record({
     status_code: 0,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: Some(@types.RequestError::Timeout),
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -417,6 +446,7 @@ test "error requests still accumulate bytes" {
   c.record({
     status_code: 200,
     latency_us: 1000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 1024L,

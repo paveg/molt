@@ -8,6 +8,7 @@ test "default config has correct defaults" {
   inspect(c.enable_tui, content="true")
   inspect(c.json_output, content="false")
   inspect(c.latency_correction, content="true")
+  inspect(c.disable_keepalive, content="false")
 }
 
 ///|
@@ -15,6 +16,7 @@ test "request result with scheduled time" {
   let r : @types.RequestResult = {
     status_code: 200,
     latency_us: 5000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 1000L,
     response_size_bytes: 0L,
@@ -27,6 +29,7 @@ test "request result with zero scheduled time" {
   let r : @types.RequestResult = {
     status_code: 200,
     latency_us: 5000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 0L,
@@ -125,6 +128,7 @@ test "request result with response size" {
   let r : @types.RequestResult = {
     status_code: 200,
     latency_us: 5000L,
+    ttfb_us: 0L,
     error: None,
     scheduled_time_us: 0L,
     response_size_bytes: 4096L,

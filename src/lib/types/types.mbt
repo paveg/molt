@@ -33,6 +33,10 @@ pub(all) struct Config {
   error_threshold_pct : Double?
   warm_up_ms : Int
   insecure : Bool
+  disable_keepalive : Bool
+  debug : Bool
+  csv_output : Bool
+  max_redirects : Int
 } derive(Show)
 
 ///|
@@ -54,6 +58,10 @@ pub fn Config::default_with_url(url : String) -> Config {
     error_threshold_pct: None,
     warm_up_ms: 0,
     insecure: false,
+    disable_keepalive: false,
+    debug: false,
+    csv_output: false,
+    max_redirects: 0,
   }
 }
 
@@ -71,6 +79,7 @@ pub(all) enum RequestError {
 pub(all) struct RequestResult {
   status_code : Int
   latency_us : Int64
+  ttfb_us : Int64 // Time to first byte (headers received, before body read)
   error : RequestError?
   scheduled_time_us : Int64 // 0 when not using rate limiting
   response_size_bytes : Int64 // 0 when error or unknown
@@ -108,6 +117,7 @@ pub(all) struct Stats {
   total_time_ms : Double
   requests_per_sec : Double
   latency : LatencyStats
+  ttfb : LatencyStats
   status_codes : Map[Int, Int]
   errors : Map[String, Int]
   custom_percentiles : Array[(Double, Int64)]
@@ -231,6 +241,18 @@ pub fn Stats::new(
   total_time_ms~ : Double,
   requests_per_sec~ : Double,
   latency~ : LatencyStats,
+  ttfb? : LatencyStats = {
+    p50_us: 0L,
+    p75_us: 0L,
+    p90_us: 0L,
+    p95_us: 0L,
+    p99_us: 0L,
+    p99_9_us: 0L,
+    max_us: 0L,
+    min_us: 0L,
+    mean_us: 0.0,
+    stdev_us: 0.0,
+  },
   status_codes~ : Map[Int, Int],
   errors~ : Map[String, Int],
   custom_percentiles? : Array[(Double, Int64)] = [],
@@ -245,6 +267,7 @@ pub fn Stats::new(
     total_time_ms,
     requests_per_sec,
     latency,
+    ttfb,
     status_codes,
     errors,
     custom_percentiles,

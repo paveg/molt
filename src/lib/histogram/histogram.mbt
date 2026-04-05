@@ -13,6 +13,7 @@ pub struct Histogram {
   priv counts_len : Int
   priv mut sum : Double
   priv mut sum_of_squares : Double
+  priv mut dropped_count : Int64
 }
 
 ///|
@@ -99,6 +100,7 @@ pub fn Histogram::new(
     counts_len,
     sum: 0.0,
     sum_of_squares: 0.0,
+    dropped_count: 0L,
   }
 }
 
@@ -138,6 +140,17 @@ pub fn Histogram::record(self : Histogram, value : Int64) -> Unit {
   let sub = self.get_sub_bucket_index(v, bucket)
   let idx = self.counts_index(bucket, sub)
   if idx < 0 || idx >= self.counts_len {
+    self.dropped_count = self.dropped_count + 1L
+    self.total_count = self.total_count + 1L
+    if v < self.min_value {
+      self.min_value = v
+    }
+    if v > self.max_value {
+      self.max_value = v
+    }
+    let fv = v.to_double()
+    self.sum = self.sum + fv
+    self.sum_of_squares = self.sum_of_squares + fv * fv
     return
   }
   self.counts[idx] = self.counts[idx] + 1L
@@ -222,6 +235,11 @@ pub fn Histogram::total_count(self : Histogram) -> Int64 {
 }
 
 ///|
+pub fn Histogram::dropped_count(self : Histogram) -> Int64 {
+  self.dropped_count
+}
+
+///|
 pub fn Histogram::reset(self : Histogram) -> Unit {
   for i in 0..<self.counts_len {
     self.counts[i] = 0L
@@ -231,4 +249,5 @@ pub fn Histogram::reset(self : Histogram) -> Unit {
   self.max_value = 0L
   self.sum = 0.0
   self.sum_of_squares = 0.0
+  self.dropped_count = 0L
 }

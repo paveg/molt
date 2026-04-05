@@ -18,6 +18,18 @@ fn make_stats(p99_us : Int64, total : Int, failed : Int) -> @types.Stats {
       mean_us: 0.0,
       stdev_us: 0.0,
     },
+    ttfb: {
+      p50_us: 0L,
+      p75_us: 0L,
+      p90_us: 0L,
+      p95_us: 0L,
+      p99_us: 0L,
+      p99_9_us: 0L,
+      max_us: 0L,
+      min_us: 0L,
+      mean_us: 0.0,
+      stdev_us: 0.0,
+    },
     status_codes: {},
     errors: {},
     custom_percentiles: [],
@@ -49,6 +61,10 @@ fn make_config(
     error_threshold_pct,
     warm_up_ms: 0,
     insecure: false,
+    disable_keepalive: false,
+    debug: false,
+    csv_output: false,
+    max_redirects: 0,
   }
 }
 

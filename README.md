@@ -23,6 +23,12 @@ A lightweight, fast HTTP load testing tool inspired by [oha](https://github.com/
 - **Time-series output** -- per-second RPS/latency snapshots in JSON
 - **Response size tracking** -- total bytes and bytes/sec in output
 - **Basic Auth** -- `--auth user:password`
+- **TTFB tracking** -- Time to First Byte measured separately from total latency
+- **CSV output** -- per-request streaming CSV (`--csv`)
+- **Debug mode** -- single request with full response dump (`--debug`)
+- **Redirect following** -- `--redirect` / `-L` follows 3xx up to 10 hops
+- **Keep-alive control** -- `--disable-keepalive` for connection pool testing
+- **Count suffixes** -- `-n 10k`, `-n 1m` for convenience
 - **Small binary** -- ~2.3 MB standalone native executable
 
 ## Installation
@@ -211,8 +217,12 @@ Usage: molt [options] <url>
 | `--percentiles` | | `50,75,90,95,99,99.9` | Custom percentiles (comma-separated) |
 | `--auth` | | -- | Basic auth credentials (`user:password`) |
 | `--insecure` | `-k` | off | Skip TLS certificate verification |
+| `--disable-keepalive` | | off | New connection per request |
+| `--redirect` | `-L` | off | Follow 3xx redirects (up to 10 hops) |
+| `--debug` | | off | Send single request, print response, exit |
 | `--no-tui` | | off | Disable TUI, print periodic status lines |
 | `--json` | `-j` | off | Output results as JSON (implies `--no-tui`) |
+| `--csv` | | off | Stream per-request CSV output |
 | `--help` | `-h` | | Show help |
 | `--version` | `-V` | | Show version |
 
@@ -309,9 +319,15 @@ moon run src/cmd/main --target native -- -c 5 -d 3s http://localhost:8080/
 | Language | MoonBit | Rust | Go | Go |
 | HDR Histogram | Yes (3 sig fig) | Yes | No | Yes |
 | TUI | Yes | Yes | No | No |
-| HTTP methods | All common (7) | All | All | All |
+| TTFB tracking | Yes | Yes | No | No |
+| CO correction | Yes | Yes | No | Yes |
+| SLA thresholds | Yes (exit 3) | No | No | Yes |
+| CSV output | Yes (streaming) | Yes | Yes | No |
+| HTTP methods | 7 | All | All | All |
+| HTTP/2 | No (planned) | Yes (+HTTP/3) | Yes | Yes |
+| Redirects | Yes | Yes | No | Yes |
 | Scenarios | No | No | No | Yes (JS) |
-| Binary size | ~2.4 MB | ~3 MB | ~5 MB | ~40 MB |
+| Binary size | ~2.3 MB | ~3 MB | ~5 MB | ~40 MB |
 
 ## Roadmap
 
@@ -329,7 +345,15 @@ moon run src/cmd/main --target native -- -c 5 -d 3s http://localhost:8080/
 - [x] `--insecure` TLS verification skip (pending upstream support)
 - [x] PATCH, HEAD, OPTIONS HTTP methods
 - [x] Connection reconnection on server-side close
-- [ ] `--http2` HTTP/2 support (upstream PR #305 in progress)
+- [x] TTFB (Time to First Byte) separate tracking
+- [x] `--csv` per-request streaming CSV output
+- [x] `--debug` single request diagnostic mode
+- [x] `--redirect` / `-L` follow 3xx redirects
+- [x] `--disable-keepalive` connection pool testing
+- [x] `-n 10k` / `-n 1m` count suffixes
+- [x] Histogram dropped value tracking (correctness fix)
+- [ ] `--http2` HTTP/2 support (upstream PR moonbitlang/async#305 in progress)
+- [ ] `--insecure` actual TLS skip (upstream issue moonbitlang/async#329)
 
 ## License
 

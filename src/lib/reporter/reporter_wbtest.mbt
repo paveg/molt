@@ -185,3 +185,28 @@ test "json_escape empty string" {
 test "json_escape consecutive special chars" {
   inspect(json_escape("\"\\\n"), content="\\\"\\\\\\n")
 }
+
+///|
+test "csv_header is a single line without newlines" {
+  inspect(csv_header.contains("\n"), content="false")
+}
+
+///|
+test "format_csv_row has exactly 3 commas" {
+  let result : @types.RequestResult = {
+    status_code: 200,
+    latency_us: 1000L,
+    ttfb_us: 0L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 512L,
+  }
+  let row = format_csv_row(result)
+  let mut commas = 0
+  for c in row {
+    if c == ',' {
+      commas = commas + 1
+    }
+  }
+  inspect(commas, content="3")
+}

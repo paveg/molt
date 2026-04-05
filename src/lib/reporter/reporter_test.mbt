@@ -177,6 +177,10 @@ test "report_json with RequestCount mode" {
     error_threshold_pct: None,
     warm_up_ms: 0,
     insecure: false,
+    disable_keepalive: false,
+    debug: false,
+    csv_output: false,
+    max_redirects: 0,
   }
   let stats = make_test_stats()
   let json = @reporter.report_json(config, stats)
@@ -221,6 +225,10 @@ test "report_json with rate set" {
     error_threshold_pct: None,
     warm_up_ms: 0,
     insecure: false,
+    disable_keepalive: false,
+    debug: false,
+    csv_output: false,
+    max_redirects: 0,
   }
   let stats = make_test_stats()
   let json = @reporter.report_json(config, stats)
@@ -238,6 +246,18 @@ test "report_json with empty status codes" {
     total_time_ms: 0.0,
     requests_per_sec: 0.0,
     latency: {
+      p50_us: 0L,
+      p75_us: 0L,
+      p90_us: 0L,
+      p95_us: 0L,
+      p99_us: 0L,
+      p99_9_us: 0L,
+      max_us: 0L,
+      min_us: 0L,
+      mean_us: 0.0,
+      stdev_us: 0.0,
+    },
+    ttfb: {
       p50_us: 0L,
       p75_us: 0L,
       p90_us: 0L,

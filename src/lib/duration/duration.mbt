@@ -50,3 +50,37 @@ pub fn parse(input : String) -> Int raise {
   }
   total_ms
 }
+
+///|
+pub fn parse_count(input : String) -> Int raise {
+  let len = input.length()
+  if len == 0 {
+    raise InvalidDuration("empty count")
+  }
+  let mut last_char = ' '
+  for i, c in input {
+    if i == len - 1 {
+      last_char = c
+    }
+  }
+  match last_char {
+    'k' | 'K' => {
+      let num_str = input[:len - 1].to_string()
+      let num = @strconv.parse_int(num_str) catch {
+        _ => raise InvalidDuration("invalid count \"\{input}\"")
+      }
+      num * 1000
+    }
+    'm' | 'M' => {
+      let num_str = input[:len - 1].to_string()
+      let num = @strconv.parse_int(num_str) catch {
+        _ => raise InvalidDuration("invalid count \"\{input}\"")
+      }
+      num * 1000000
+    }
+    _ =>
+      @strconv.parse_int(input) catch {
+        _ => raise InvalidDuration("invalid count \"\{input}\"")
+      }
+  }
+}

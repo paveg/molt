@@ -8,6 +8,7 @@ import {
   "mizchi/tui/vnode",
   "mizchi/tui/io",
   "moonbitlang/async",
+  "moonbitlang/async/http",
   "moonbitlang/core/argparse",
   "moonbitlang/core/strconv",
   "moonbitlang/core/env",

@@ -1,4 +1,16 @@
 ///|
+pub let csv_header : String = "latency_us,status_code,error,response_size_bytes"
+
+///|
+pub fn format_csv_row(result : @types.RequestResult) -> String {
+  let error_str = match result.error {
+    Some(err) => err.to_string()
+    None => ""
+  }
+  "\{result.latency_us},\{result.status_code},\{error_str},\{result.response_size_bytes}"
+}
+
+///|
 fn format_us_as_ms(us : Int64) -> String {
   let ms_whole = us / 1000L
   let ms_frac = us % 1000L / 10L
@@ -136,6 +148,24 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
     "    \"stdev_ms\": \{format_double(lat.stdev_us / 1000.0)}\n",
   )
   buf.write_string("  },\n")
+  // "ttfb" section
+  let ttfb = stats.ttfb
+  buf.write_string("  \"ttfb\": {\n")
+  write_json_lat_field(buf, "p50_ms", ttfb.p50_us, true)
+  write_json_lat_field(buf, "p75_ms", ttfb.p75_us, true)
+  write_json_lat_field(buf, "p90_ms", ttfb.p90_us, true)
+  write_json_lat_field(buf, "p95_ms", ttfb.p95_us, true)
+  write_json_lat_field(buf, "p99_ms", ttfb.p99_us, true)
+  write_json_lat_field(buf, "p99_9_ms", ttfb.p99_9_us, true)
+  write_json_lat_field(buf, "max_ms", ttfb.max_us, true)
+  write_json_lat_field(buf, "min_ms", ttfb.min_us, true)
+  buf.write_string(
+    "    \"mean_ms\": \{format_double(ttfb.mean_us / 1000.0)},\n",
+  )
+  buf.write_string(
+    "    \"stdev_ms\": \{format_double(ttfb.stdev_us / 1000.0)}\n",
+  )
+  buf.write_string("  },\n")
   // "status_codes" section
   buf.write_string("  \"status_codes\": {")
   let mut first = true
@@ -235,6 +265,14 @@ pub fn report_text(stats : @types.Stats) -> String {
   buf.write_string("\n")
   buf.write_string("  mean    \{format_us_as_ms(lat.mean_us.to_int64())}\n")
   buf.write_string("  stdev   \{format_us_as_ms(lat.stdev_us.to_int64())}\n")
+  if stats.ttfb.max_us > 0L {
+    buf.write_string("\nTTFB (Time to First Byte):\n")
+    let ttfb = stats.ttfb
+    buf.write_string("  p50     \{format_us_as_ms(ttfb.p50_us)}\n")
+    buf.write_string("  p99     \{format_us_as_ms(ttfb.p99_us)}\n")
+    buf.write_string("  max     \{format_us_as_ms(ttfb.max_us)}\n")
+    buf.write_string("  mean    \{format_us_as_ms(ttfb.mean_us.to_int64())}\n")
+  }
   if stats.total_bytes > 0L {
     buf.write_string("\n")
     buf.write_string("Throughput:\n")

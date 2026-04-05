@@ -1,6 +1,7 @@
 ///|
 pub struct Collector {
   priv histogram : @histogram.Histogram
+  priv ttfb_histogram : @histogram.Histogram
   priv mut total_requests : Int
   priv mut failed : Int
   priv status_codes : Map[Int, Int]
@@ -12,6 +13,7 @@ pub struct Collector {
 pub fn Collector::new() -> Collector {
   {
     histogram: @histogram.Histogram::new(3600000000L, 3),
+    ttfb_histogram: @histogram.Histogram::new(3600000000L, 3),
     total_requests: 0,
     failed: 0,
     status_codes: {},
@@ -23,6 +25,7 @@ pub fn Collector::new() -> Collector {
 ///|
 pub fn Collector::reset(self : Collector) -> Unit {
   self.histogram.reset()
+  self.ttfb_histogram.reset()
   self.total_requests = 0
   self.failed = 0
   self.status_codes.clear()
@@ -45,6 +48,9 @@ pub fn Collector::record(
     }
     None => {
       self.histogram.record(result.latency_us)
+      if result.ttfb_us > 0L {
+        self.ttfb_histogram.record(result.ttfb_us)
+      }
       let code = result.status_code
       self.status_codes[code] = self.status_codes.get(code).unwrap_or(0) + 1
       if code >= 500 {
@@ -93,6 +99,18 @@ pub fn Collector::finalize(
     mean_us: self.histogram.mean(),
     stdev_us: self.histogram.stdev(),
   }
+  let ttfb : @types.LatencyStats = {
+    p50_us: self.ttfb_histogram.percentile(50.0),
+    p75_us: self.ttfb_histogram.percentile(75.0),
+    p90_us: self.ttfb_histogram.percentile(90.0),
+    p95_us: self.ttfb_histogram.percentile(95.0),
+    p99_us: self.ttfb_histogram.percentile(99.0),
+    p99_9_us: self.ttfb_histogram.percentile(99.9),
+    max_us: self.ttfb_histogram.max(),
+    min_us: self.ttfb_histogram.min(),
+    mean_us: self.ttfb_histogram.mean(),
+    stdev_us: self.ttfb_histogram.stdev(),
+  }
   let custom_percentiles : Array[(Double, Int64)] = []
   for p in percentiles {
     custom_percentiles.push((p, self.histogram.percentile(p)))
@@ -109,6 +127,7 @@ pub fn Collector::finalize(
     total_time_ms,
     requests_per_sec: rps,
     latency,
+    ttfb,
     status_codes: self.status_codes,
     errors: self.errors,
     custom_percentiles,

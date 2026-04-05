@@ -7,6 +7,31 @@ async fn main {
       panic()
     }
   }
+  if config.debug {
+    println("DEBUG: sending single request to \{config.url}\n")
+    try {
+      let (response, data) = @http.get(config.url)
+      println("Status: \{response.code} \{response.reason}")
+      println("Headers:")
+      for k, v in response.headers {
+        println("  \{k}: \{v}")
+      }
+      let body_str = data.text() catch { _ => "<binary or decode error>" }
+      let preview = if body_str.length() > 500 {
+        body_str[:500].to_string() + "..."
+      } else {
+        body_str
+      }
+      println("Body:\n\{preview}")
+    } catch {
+      err => {
+        println("DEBUG request failed: \{err}")
+        @sys.exit(1)
+        panic()
+      }
+    }
+    return
+  }
   if not(config.json_output) && not(config.enable_tui) {
     println("molt v0.1.0 -- MoonBit HTTP Load Tester\n")
     println("Target:       \{config.url}")
@@ -44,7 +69,13 @@ async fn main {
   } else {
     None
   }
-  let stats = @coordinator.run(config, tui_callbacks~)
+  let csv_callback : ((@types.RequestResult) -> Unit)? = if config.csv_output {
+    println(@reporter.csv_header)
+    Some(fn(result) { println(@reporter.format_csv_row(result)) })
+  } else {
+    None
+  }
+  let stats = @coordinator.run(config, tui_callbacks~, on_result=csv_callback)
   if config.json_output {
     println(@reporter.report_json(config, stats))
   } else {
@@ -222,6 +253,27 @@ fn parse_args() -> @types.Config raise {
         long="insecure",
         about="Skip TLS certificate verification",
       ),
+      @argparse.FlagArg(
+        "disable-keepalive",
+        long="disable-keepalive",
+        about="Disable HTTP keep-alive, create new connection per request",
+      ),
+      @argparse.FlagArg(
+        "debug",
+        long="debug",
+        about="Send a single request and print full details, then exit",
+      ),
+      @argparse.FlagArg(
+        "csv",
+        long="csv",
+        about="Output per-request results as CSV",
+      ),
+      @argparse.FlagArg(
+        "redirect",
+        short='L',
+        long="redirect",
+        about="Follow HTTP redirects (up to 10 hops)",
+      ),
     ],
     positionals=[@argparse.PositionArg("url", about="Target URL")],
   )
@@ -248,7 +300,7 @@ fn parse_args() -> @types.Config raise {
       @types.TestMode::Duration(ms)
     }
     (None, Some(r)) => {
-      let n = @strconv.parse_int(r) catch {
+      let n = @duration.parse_count(r) catch {
         _ => raise Failure::Failure("Invalid request count")
       }
       @types.TestMode::RequestCount(n)
@@ -360,6 +412,14 @@ fn parse_args() -> @types.Config raise {
     None => ()
   }
   let insecure = get_flag(matches, "insecure")
+  let disable_keepalive = get_flag(matches, "disable-keepalive")
+  let debug = get_flag(matches, "debug")
+  let csv_output = get_flag(matches, "csv")
+  let redirect = get_flag(matches, "redirect")
+  let max_redirects = if redirect { 10 } else { 0 }
+  if csv_output && json_output {
+    raise Failure::Failure("Cannot specify both --csv and --json")
+  }
   {
     url,
     connections,
@@ -368,7 +428,7 @@ fn parse_args() -> @types.Config raise {
     headers,
     body,
     timeout_ms,
-    enable_tui: not(no_tui) && not(json_output),
+    enable_tui: not(no_tui) && not(json_output) && not(csv_output) && not(debug),
     json_output,
     latency_correction: true,
     rate,
@@ -377,5 +437,9 @@ fn parse_args() -> @types.Config raise {
     error_threshold_pct,
     warm_up_ms,
     insecure,
+    disable_keepalive,
+    debug,
+    csv_output,
+    max_redirects,
   }
 }
