@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/paveg/molt/compare/molt-v0.1.1...molt-v0.1.2) (2026-04-05)
+
+
+### Bug Fixes
+
+* merge release build into release-please workflow ([eb3d68c](https://github.com/paveg/molt/commit/eb3d68c7e72da288deca16519a91381ddd9fb418))
+
 ## [0.1.1](https://github.com/paveg/molt/compare/molt-v0.1.0...molt-v0.1.1) (2026-04-05)
 
 
