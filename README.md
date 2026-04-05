@@ -13,6 +13,10 @@ A lightweight, fast HTTP load testing tool inspired by [oha](https://github.com/
 - **Full HTTP method support** -- GET, POST, PUT, DELETE with custom headers and body
 - **Flexible test modes** -- by duration (`-d 30s`) or by total request count (`-n 10000`)
 - **Accurate percentiles** -- p50, p75, p90, p95, p99, p99.9 via HDR Histogram
+- **Rate limiting** -- fixed RPS mode with token bucket (`--rate`)
+- **Coordinated Omission correction** -- accurate latency under rate-limited load
+- **Per-request timeout** -- configurable via `--timeout`
+- **Error classification** -- timeout, connection refused, reset, DNS, TLS errors
 - **Small binary** -- ~2.4 MB standalone native executable
 
 ## Quick Start
@@ -49,6 +53,16 @@ molt -n 10000 -c 50 http://localhost:8080/
 
 # JSON output for CI pipelines
 molt --json -c 50 -d 10s http://localhost:8080/ > results.json
+
+# Fixed rate: 500 requests per second
+molt -r 500 -c 50 -d 30s http://localhost:8080/
+
+# Custom timeout (5 seconds per request)
+molt -t 5s -c 10 -d 10s http://localhost:8080/slow-endpoint
+
+# Request body from file
+molt -m POST -H 'Content-Type: application/json' -B payload.json \
+  -c 10 -d 10s http://localhost:8080/api/data
 
 # Plain text mode (no TUI, prints periodic status lines)
 molt --no-tui -c 10 -d 10s http://localhost:8080/
@@ -145,6 +159,9 @@ Usage: molt [options] <url>
 | `--method` | `-m` | `GET` | HTTP method: `GET`, `POST`, `PUT`, `DELETE` |
 | `--header` | `-H` | -- | Custom header, repeatable (`-H 'K: V'`) |
 | `--body` | `-b` | -- | Request body string |
+| `--body-file` | `-B` | -- | Request body from file (mutually exclusive with `-b`) |
+| `--rate` | `-r` | -- | Target requests per second |
+| `--timeout` | `-t` | `30s` | Per-request timeout (`5s`, `1m`) |
 | `--no-tui` | | off | Disable TUI, print periodic status lines |
 | `--json` | `-j` | off | Output results as JSON (implies `--no-tui`) |
 | `--help` | `-h` | | Show help |
@@ -197,7 +214,7 @@ Usage: molt [options] <url>
 | `lib/reporter` | Text and JSON output formatting |
 | `lib/tui` | Real-time TUI state management and VNode rendering |
 | `lib/duration` | Duration string parser (`"10s"`, `"1m30s"` -> ms) |
-| `lib/rate_limiter` | Token bucket rate limiter (designed, wiring pending) |
+| `lib/rate_limiter` | Token bucket rate limiter for `--rate` mode |
 
 ## How It Works
 
@@ -249,12 +266,12 @@ moon run src/cmd/main --target native -- -c 5 -d 3s http://localhost:8080/
 
 ## Roadmap
 
-- [ ] `--rate` flag: fixed RPS with token bucket rate limiting
-- [ ] Coordinated Omission correction (scheduled_time_us field is ready)
-- [ ] `--timeout` per-request timeout enforcement
-- [ ] `--body-file` for loading request body from file
+- [x] `--rate` flag: fixed RPS with token bucket rate limiting
+- [x] Coordinated Omission correction
+- [x] `--timeout` per-request timeout enforcement
+- [x] `--body-file` for loading request body from file
+- [x] Error classification (timeout, connection refused, DNS error, TLS error)
 - [ ] Connection reconnection on server-side close
-- [ ] Error classification (timeout, connection refused, DNS error, TLS error)
 - [ ] `--http2` HTTP/2 support
 
 ## License

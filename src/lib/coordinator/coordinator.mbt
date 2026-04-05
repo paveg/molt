@@ -55,14 +55,17 @@ pub async fn run(
         })
       None => ()
     }
-    // Spawn workers
-    for _ in 0..<config.connections {
+    // Spawn workers with CO correction support
+    let num_workers = config.connections
+    for i in 0..<num_workers {
       group.spawn_bg(async fn() {
         @worker.run(
           config,
           fn(result) { collector.record(result) },
           fn() { stopped },
           rate_limiter=limiter,
+          worker_id=i,
+          num_workers~,
         )
       })
     }

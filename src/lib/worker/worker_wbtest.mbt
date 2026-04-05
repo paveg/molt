@@ -94,6 +94,66 @@ test "build_headers duplicate key uses last value" {
 }
 
 ///|
+test "compute_scheduled_time first request" {
+  // Worker 0 of 2, rate=100 RPS → interval = 10000us per request per worker
+  // First request: scheduled = epoch + 0 * 20000 + 0 * 10000 = epoch
+  let scheduled = compute_scheduled_time(
+    epoch_us=1000000L, request_index=0, rate=100, worker_id=0, num_workers=2,
+  )
+  inspect(scheduled, content="1000000")
+}
+
+///|
+test "compute_scheduled_time second request" {
+  // Worker 0 of 2, rate=100 → interval_per_request = 10000us
+  // Each worker sends every 20000us (2 workers * 10000us)
+  // Second request: epoch + 1 * 20000
+  let scheduled = compute_scheduled_time(
+    epoch_us=1000000L, request_index=1, rate=100, worker_id=0, num_workers=2,
+  )
+  inspect(scheduled, content="1020000")
+}
+
+///|
+test "compute_scheduled_time worker offset" {
+  // Worker 1 of 2 starts offset by 10000us from worker 0
+  let scheduled = compute_scheduled_time(
+    epoch_us=1000000L, request_index=0, rate=100, worker_id=1, num_workers=2,
+  )
+  inspect(scheduled, content="1010000")
+}
+
+///|
+test "compute_corrected_latency with delay" {
+  // Scheduled at t=0us, actually measured elapsed=5000us, but was delayed 3000us
+  // Corrected = elapsed + delay = 5000 + 3000 = 8000
+  let corrected = compute_corrected_latency(
+    elapsed_us=5000L, scheduled_us=1000000L, actual_start_us=1003000L,
+  )
+  inspect(corrected, content="8000")
+}
+
+///|
+test "compute_corrected_latency on time" {
+  // Scheduled at t=0us, sent on time → no correction
+  let corrected = compute_corrected_latency(
+    elapsed_us=5000L, scheduled_us=1000000L, actual_start_us=1000000L,
+  )
+  inspect(corrected, content="5000")
+}
+
+///|
+test "compute_corrected_latency early send" {
+  // Sent before scheduled time (shouldn't happen but boundary)
+  // actual_start < scheduled → delay is negative → just use elapsed
+  let corrected = compute_corrected_latency(
+    elapsed_us=5000L, scheduled_us=1000000L, actual_start_us=999000L,
+  )
+  // Should not go below elapsed
+  inspect(corrected >= 5000L, content="true")
+}
+
+///|
 test "classify_error/timeout" {
   let err = classify_error("connection timeout exceeded")
   inspect(err, content="Timeout")
