@@ -93,6 +93,13 @@ fn parse_args() -> @types.Config raise {
         long="body",
         about="Request body string",
       ),
+      @argparse.OptionArg(
+        "timeout",
+        short='t',
+        long="timeout",
+        about="Per-request timeout (e.g. 5s, 30s)",
+        default_values=["30s"],
+      ),
     ],
     flags=[
       @argparse.FlagArg("no-tui", long="no-tui", about="Disable TUI, use plain output"),
@@ -176,6 +183,12 @@ fn parse_args() -> @types.Config raise {
     Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
     None => None
   }
+  // Parse timeout
+  let timeout_str = match matches.values.get("timeout") {
+    Some(vals) => if vals.length() > 0 { vals[0] } else { "30s" }
+    None => "30s"
+  }
+  let timeout_ms = try { @duration.parse(timeout_str) } catch { _ => 30000 }
   // Parse flags
   let no_tui = match matches.flags.get("no-tui") {
     Some(v) => v
@@ -192,7 +205,7 @@ fn parse_args() -> @types.Config raise {
     http_method,
     headers,
     body,
-    timeout_ms: 30000,
+    timeout_ms,
     enable_tui: not(no_tui) && not(json_output),
     json_output,
     latency_correction: true,
