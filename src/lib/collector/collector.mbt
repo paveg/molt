@@ -39,6 +39,10 @@ pub fn Collector::record(self : Collector, result : @types.RequestResult) -> Uni
         None => 0
       }
       self.status_codes[code] = count + 1
+      // Count server errors (5xx) as failures
+      if code >= 500 {
+        self.failed = self.failed + 1
+      }
     }
   }
 }

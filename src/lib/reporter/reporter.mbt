@@ -41,6 +41,22 @@ fn format_double(v : Double) -> String {
 }
 
 ///|
+fn json_escape(s : String) -> String {
+  let buf = StringBuilder::new()
+  for c in s {
+    match c {
+      '"' => buf.write_string("\\\"")
+      '\\' => buf.write_string("\\\\")
+      '\n' => buf.write_string("\\n")
+      '\r' => buf.write_string("\\r")
+      '\t' => buf.write_string("\\t")
+      _ => buf.write_char(c)
+    }
+  }
+  buf.to_string()
+}
+
+///|
 fn method_to_string(http_method : @types.HttpMethod) -> String {
   match http_method {
     @types.HttpMethod::Get => "GET"
@@ -56,7 +72,7 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
   buf.write_string("{\n")
   // "config" section
   buf.write_string("  \"config\": {\n")
-  buf.write_string("    \"url\": \"\{config.url}\",\n")
+  buf.write_string("    \"url\": \"\{json_escape(config.url)}\",\n")
   buf.write_string("    \"connections\": \{config.connections},\n")
   let duration_sec = match config.mode {
     @types.TestMode::Duration(ms) => ms.to_double() / 1000.0
@@ -65,6 +81,11 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
   buf.write_string(
     "    \"duration_sec\": \{format_double(duration_sec)},\n",
   )
+  match config.rate {
+    Some(r) => buf.write_string("    \"rate_rps\": \{r},\n")
+    None => buf.write_string("    \"rate_rps\": null,\n")
+  }
+  buf.write_string("    \"timeout_ms\": \{config.timeout_ms},\n")
   buf.write_string(
     "    \"method\": \"\{method_to_string(config.http_method)}\"\n",
   )
@@ -106,6 +127,9 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
     "    \"max_ms\": \{format_double(lat.max_us.to_double() / 1000.0)},\n",
   )
   buf.write_string(
+    "    \"min_ms\": \{format_double(lat.min_us.to_double() / 1000.0)},\n",
+  )
+  buf.write_string(
     "    \"mean_ms\": \{format_double(lat.mean_us / 1000.0)},\n",
   )
   buf.write_string(
@@ -130,7 +154,7 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
     if not(first) {
       buf.write_string(",")
     }
-    buf.write_string("\n    \"\{err_type}\": \{count}")
+    buf.write_string("\n    \"\{json_escape(err_type)}\": \{count}")
     first = false
   }
   buf.write_string("\n  }\n")

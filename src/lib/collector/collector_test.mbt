@@ -19,8 +19,8 @@ test "collect mixed results" {
   }
   let stats = c.finalize(1000.0)
   inspect(stats.total_requests, content="100")
-  inspect(stats.successful, content="100")
-  inspect(stats.failed, content="0")
+  inspect(stats.successful, content="90")
+  inspect(stats.failed, content="10")
   inspect(stats.status_codes.get(200), content="Some(90)")
   inspect(stats.status_codes.get(500), content="Some(10)")
 }
@@ -128,6 +128,35 @@ test "scheduled_time_us zero means no correction" {
   let stats = c.finalize(1000.0)
   inspect(stats.latency.min_us, content="1000")
   inspect(stats.latency.max_us, content="2000")
+}
+
+///|
+test "5xx status codes counted as failed" {
+  let c = @collector.Collector::new()
+  c.record({ status_code: 500, latency_us: 1000L, error: None, scheduled_time_us: 0L })
+  c.record({ status_code: 503, latency_us: 1000L, error: None, scheduled_time_us: 0L })
+  c.record({ status_code: 200, latency_us: 1000L, error: None, scheduled_time_us: 0L })
+  let stats = c.finalize(1000.0)
+  inspect(stats.total_requests, content="3")
+  inspect(stats.successful, content="1")
+  inspect(stats.failed, content="2")
+}
+
+///|
+test "499 is not counted as server error" {
+  let c = @collector.Collector::new()
+  c.record({ status_code: 499, latency_us: 1000L, error: None, scheduled_time_us: 0L })
+  let stats = c.finalize(1000.0)
+  inspect(stats.successful, content="1")
+  inspect(stats.failed, content="0")
+}
+
+///|
+test "500 boundary" {
+  let c = @collector.Collector::new()
+  c.record({ status_code: 500, latency_us: 1000L, error: None, scheduled_time_us: 0L })
+  let stats = c.finalize(1000.0)
+  inspect(stats.failed, content="1")
 }
 
 ///|

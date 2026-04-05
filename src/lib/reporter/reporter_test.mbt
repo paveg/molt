@@ -184,6 +184,44 @@ test "report_json with RequestCount mode" {
 }
 
 ///|
+test "report_json contains min_ms in latency" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let stats = make_test_stats()
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"min_ms\""), content="true")
+}
+
+///|
+test "report_json contains rate_rps and timeout_ms in config" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let stats = make_test_stats()
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"rate_rps\": null"), content="true")
+  inspect(json.contains("\"timeout_ms\": 30000"), content="true")
+}
+
+///|
+test "report_json with rate set" {
+  let config : @types.Config = {
+    url: "https://example.com",
+    connections: 10,
+    mode: @types.TestMode::Duration(10000),
+    http_method: @types.HttpMethod::Get,
+    headers: [],
+    body: None,
+    timeout_ms: 5000,
+    enable_tui: false,
+    json_output: true,
+    latency_correction: false,
+    rate: Some(100),
+  }
+  let stats = make_test_stats()
+  let json = @reporter.report_json(config, stats)
+  inspect(json.contains("\"rate_rps\": 100"), content="true")
+  inspect(json.contains("\"timeout_ms\": 5000"), content="true")
+}
+
+///|
 test "report_json with empty status codes" {
   let config = @types.Config::default_with_url("https://example.com")
   let stats : @types.Stats = {
