@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/paveg/molt/compare/molt-v0.1.2...molt-v0.1.3) (2026-04-05)
+
+
+### Bug Fixes
+
+* improve TUI layout with single-column stats ([fbefd97](https://github.com/paveg/molt/commit/fbefd9713dadccd62eccd756b72895c1ac030044))
+
 ## [0.1.2](https://github.com/paveg/molt/compare/molt-v0.1.1...molt-v0.1.2) (2026-04-05)
 
 
