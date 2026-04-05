@@ -3,8 +3,9 @@ import {
   "moonbitlang/async/aqueue",
 }
 
+supported_targets = "native"
+
 options(
-  "supported-targets": "native",
   targets: {
     "rate_limiter.mbt": [ "native" ],
     "rate_limiter_wbtest.mbt": [ "native" ],

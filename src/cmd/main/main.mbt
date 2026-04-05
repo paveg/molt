@@ -50,7 +50,7 @@ async fn main {
     }
     return
   }
-  if not(config.json_output) && not(config.enable_tui) {
+  if !config.json_output && !config.enable_tui {
     println("molt v0.1.0 -- MoonBit HTTP Load Tester\n")
     println("Target:       \{config.url}")
     println("Method:       \{config.http_method}")
@@ -77,7 +77,7 @@ async fn main {
       },
       on_cleanup: fn() { @io.print_raw(@vnode.VNodeApp::restore_terminal()) },
     })
-  } else if not(config.json_output) {
+  } else if !config.json_output {
     // Plain mode: print one-line status
     Some({
       on_init: fn() {  },
@@ -100,7 +100,7 @@ async fn main {
     println(@reporter.report_text(stats))
   }
   let threshold_result = @threshold.check(stats, config)
-  if not(threshold_result.passed) {
+  if !threshold_result.passed {
     for v in threshold_result.violations {
       println("THRESHOLD VIOLATION: \{v}")
     }
@@ -315,7 +315,7 @@ fn parse_args() -> @types.Config raise {
       }
   }
   let conn_str = get_option_value(matches, "connections", "50")
-  let connections = @strconv.parse_int(conn_str) catch { _ => 50 }
+  let connections = @string.parse_int(conn_str) catch { _ => 50 }
   if connections <= 0 {
     raise Failure::Failure("--connections must be a positive integer")
   }
@@ -374,7 +374,7 @@ fn parse_args() -> @types.Config raise {
   }
   let rate : Int? = match get_option_value_opt(matches, "rate") {
     Some(s) => {
-      let r = @strconv.parse_int(s) catch {
+      let r = @string.parse_int(s) catch {
         _ => raise Failure::Failure("Invalid rate value")
       }
       if r <= 0 {
@@ -394,7 +394,7 @@ fn parse_args() -> @types.Config raise {
       let parts = parse_comma_separated(s)
       let result : Array[Double] = []
       for p in parts {
-        let v = @strconv.parse_double(p) catch {
+        let v = @string.parse_double(p) catch {
           _ => raise Failure::Failure("Invalid percentile value: \{p}")
         }
         if v < 0.0 || v > 100.0 {
@@ -420,7 +420,7 @@ fn parse_args() -> @types.Config raise {
     get_option_value_opt(matches, "error-threshold") {
     Some(s) =>
       Some(
-        @strconv.parse_double(s) catch {
+        @string.parse_double(s) catch {
           _ => raise Failure::Failure("Invalid error threshold")
         },
       )
@@ -432,7 +432,7 @@ fn parse_args() -> @types.Config raise {
   }
   match get_option_value_opt(matches, "auth") {
     Some(creds) => {
-      if not(creds.contains(":")) {
+      if !creds.contains(":") {
         raise Failure::Failure("--auth must be in user:password format")
       }
       let encoded = @types.base64_encode(creds)
@@ -457,7 +457,7 @@ fn parse_args() -> @types.Config raise {
     headers,
     body,
     timeout_ms,
-    enable_tui: not(no_tui) && not(json_output) && not(csv_output) && not(debug),
+    enable_tui: !no_tui && !json_output && !csv_output && !debug,
     json_output,
     latency_correction: true,
     rate,

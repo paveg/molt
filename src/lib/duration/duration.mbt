@@ -18,7 +18,7 @@ pub fn parse(input : String) -> Int raise {
           raise InvalidDuration("missing number before '\{c}' in \"\{input}\"")
         }
         let num_str = input[num_start:i].to_string()
-        let n = @strconv.parse_int(num_str) catch {
+        let n = @string.parse_int(num_str) catch {
           _ =>
             raise InvalidDuration(
               "invalid number \"\{num_str}\" in \"\{input}\"",
@@ -66,7 +66,7 @@ pub fn parse_count(input : String) -> Int raise {
   match last_char {
     'k' | 'K' => {
       let num_str = input[:len - 1].to_string()
-      let num = @strconv.parse_int(num_str) catch {
+      let num = @string.parse_int(num_str) catch {
         _ => raise InvalidDuration("invalid count \"\{input}\"")
       }
       if num < 0 || num > 2147483 {
@@ -76,7 +76,7 @@ pub fn parse_count(input : String) -> Int raise {
     }
     'm' | 'M' => {
       let num_str = input[:len - 1].to_string()
-      let num = @strconv.parse_int(num_str) catch {
+      let num = @string.parse_int(num_str) catch {
         _ => raise InvalidDuration("invalid count \"\{input}\"")
       }
       if num < 0 || num > 2147 {
@@ -85,7 +85,7 @@ pub fn parse_count(input : String) -> Int raise {
       num * 1000000
     }
     _ =>
-      @strconv.parse_int(input) catch {
+      @string.parse_int(input) catch {
         _ => raise InvalidDuration("invalid count \"\{input}\"")
       }
   }

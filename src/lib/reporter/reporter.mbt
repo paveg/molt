@@ -162,7 +162,7 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
   buf.write_string("  \"status_codes\": {")
   let mut first = true
   for code, count in stats.status_codes {
-    if not(first) {
+    if !first {
       buf.write_string(",")
     }
     buf.write_string("\n    \"\{code}\": \{count}")
@@ -173,7 +173,7 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
   buf.write_string("  \"errors\": {")
   first = true
   for err_type, count in stats.errors {
-    if not(first) {
+    if !first {
       buf.write_string(",")
     }
     buf.write_string("\n    \"\{json_escape(err_type)}\": \{count}")
@@ -184,7 +184,7 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
   buf.write_string("  \"custom_percentiles\": {")
   first = true
   for pair in stats.custom_percentiles {
-    if not(first) {
+    if !first {
       buf.write_string(",")
     }
     let (p, v) = pair
@@ -203,7 +203,7 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
   buf.write_string("  \"time_series\": [")
   first = true
   for point in stats.time_series {
-    if not(first) {
+    if !first {
       buf.write_string(",")
     }
     buf.write_string("\n    {")

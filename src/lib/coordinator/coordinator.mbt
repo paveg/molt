@@ -42,7 +42,7 @@ pub async fn run(
     group.spawn_bg(async fn() {
       let mut prev_requests = 0
       let mut prev_errors = 0
-      while not(stopped) {
+      while !stopped {
         @async.sleep(1000)
         if stopped {
           break
@@ -69,7 +69,7 @@ pub async fn run(
     if tui_callbacks is Some(cb) {
       group.spawn_bg(async fn() {
         let interval = if config.enable_tui { 500 } else { 1000 }
-        while not(stopped) {
+        while !stopped {
           let elapsed = @bench.monotonic_clock_end(start_time) / 1000.0
           tui_state.update(
             total_requests=collector.total_requests(),

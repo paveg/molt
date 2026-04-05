@@ -8,7 +8,8 @@ import {
   "moonbitlang/core/bench",
 }
 
+supported_targets = "native"
+
 options(
-  "supported-targets": "native",
   targets: { "coordinator.mbt": [ "native" ] },
 )

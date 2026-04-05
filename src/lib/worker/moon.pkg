@@ -4,10 +4,11 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbitlang/core/bench",
-  "moonbitlang/core/strconv",
+  "moonbitlang/core/string",
 }
 
+supported_targets = "native"
+
 options(
-  "supported-targets": "native",
   targets: { "worker.mbt": [ "native" ], "worker_wbtest.mbt": [ "native" ] },
 )

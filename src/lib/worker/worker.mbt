@@ -143,7 +143,7 @@ pub async fn run(
   let use_co = config.latency_correction && rate_limiter is Some(_)
   let rate = config.rate.unwrap_or(1)
   let mut request_index = 0
-  while not(should_stop()) {
+  while !should_stop() {
     if rate_limiter is Some(rl) {
       rl.acquire()
     }
@@ -211,7 +211,7 @@ pub async fn run(
             response
           }
           let size_bytes = match final_response.headers.get("content-length") {
-            Some(v) => @strconv.parse_int64(v) catch { _ => 0L }
+            Some(v) => @string.parse_int64(v) catch { _ => 0L }
             None => 0L
           }
           let total_raw = @bench.monotonic_clock_end(start).to_int64()

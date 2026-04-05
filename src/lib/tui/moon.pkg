@@ -4,8 +4,9 @@ import {
   "moonbitlang/core/bench",
 }
 
+supported_targets = "native"
+
 options(
-  "supported-targets": "native",
   targets: {
     "tui.mbt": [ "native" ],
     "tui_test.mbt": [ "native" ],

@@ -11,17 +11,18 @@ import {
   "moonbitlang/async/http",
   "moonbitlang/async/socket",
   "moonbitlang/core/argparse",
-  "moonbitlang/core/strconv",
   "moonbitlang/core/env",
+  "moonbitlang/core/string",
   "moonbitlang/x/fs",
   "moonbitlang/x/sys",
 }
+
+supported_targets = "native"
 
 options(
   "is-main": true,
   link: {
     "native": { "cc-link-flags": ".mooncakes/mizchi/tui/src/io/tui_native.c" },
   },
-  "supported-targets": "native",
   targets: { "main.mbt": [ "native" ] },
 )
