@@ -1,9 +1,15 @@
 ///|
 async fn main {
   let config = parse_args() catch {
+    Failure::Failure(msg) => {
+      println("Error: \{msg}")
+      @sys.exit(1)
+      panic()
+    }
     err => {
       println("Error: \{err}")
-      return
+      @sys.exit(1)
+      panic()
     }
   }
   if not(config.json_output) && not(config.enable_tui) {
@@ -48,6 +54,9 @@ async fn main {
     println(@reporter.report_json(config, stats))
   } else {
     println(@reporter.report_text(stats))
+  }
+  if stats.failed > 0 {
+    @sys.exit(2)
   }
 }
 
