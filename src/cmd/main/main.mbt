@@ -15,6 +15,10 @@ async fn main {
       @types.TestMode::Duration(ms) => println("Duration:     \{ms / 1000}s")
       @types.TestMode::RequestCount(n) => println("Requests:     \{n}")
     }
+    match config.rate {
+      Some(r) => println("Rate limit:   \{r} req/s")
+      None => ()
+    }
     println("\nRunning...\n")
   }
   // Set up TUI callbacks
@@ -92,6 +96,12 @@ fn parse_args() -> @types.Config raise {
         short='b',
         long="body",
         about="Request body string",
+      ),
+      @argparse.OptionArg(
+        "rate",
+        short='r',
+        long="rate",
+        about="Target requests per second",
       ),
     ],
     flags=[
@@ -176,6 +186,22 @@ fn parse_args() -> @types.Config raise {
     Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
     None => None
   }
+  // Parse rate
+  let rate : Int? = match matches.values.get("rate") {
+    Some(vals) =>
+      if vals.length() > 0 {
+        Some(
+          try {
+            @strconv.parse_int(vals[0])
+          } catch {
+            _ => raise Failure::Failure("Invalid rate value")
+          },
+        )
+      } else {
+        None
+      }
+    None => None
+  }
   // Parse flags
   let no_tui = match matches.flags.get("no-tui") {
     Some(v) => v
@@ -196,5 +222,6 @@ fn parse_args() -> @types.Config raise {
     enable_tui: not(no_tui) && not(json_output),
     json_output,
     latency_correction: true,
+    rate,
   }
 }

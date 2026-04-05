@@ -25,6 +25,15 @@ pub async fn run(
     None => ()
   }
   @async.with_task_group(async fn(group) {
+    // Set up rate limiter if configured
+    let limiter : @rate_limiter.RateLimiter? = match config.rate {
+      Some(rate) => {
+        let rl = @rate_limiter.RateLimiter::new(rate)
+        rl.start(group)
+        Some(rl)
+      }
+      None => None
+    }
     // TUI/plain update task
     match tui_callbacks {
       Some(cb) =>
@@ -49,9 +58,12 @@ pub async fn run(
     // Spawn workers
     for _ in 0..<config.connections {
       group.spawn_bg(async fn() {
-        @worker.run(config, fn(result) { collector.record(result) }, fn() {
-          stopped
-        })
+        @worker.run(
+          config,
+          fn(result) { collector.record(result) },
+          fn() { stopped },
+          rate_limiter=limiter,
+        )
       })
     }
     // Wait for termination condition

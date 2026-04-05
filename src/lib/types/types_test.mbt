@@ -78,3 +78,9 @@ test "parse_header only colon-space prefix yields empty key" {
     content="Some((\"\", \"value\"))",
   )
 }
+
+///|
+test "default config has rate None" {
+  let c = @types.Config::default_with_url("https://example.com")
+  inspect(c.rate, content="None")
+}

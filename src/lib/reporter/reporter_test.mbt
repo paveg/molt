@@ -174,6 +174,7 @@ test "report_json with RequestCount mode" {
     enable_tui: false,
     json_output: true,
     latency_correction: true,
+    rate: None,
   }
   let stats = make_test_stats()
   let json = @reporter.report_json(config, stats)

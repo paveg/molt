@@ -24,6 +24,7 @@ pub(all) struct Config {
   enable_tui : Bool
   json_output : Bool
   latency_correction : Bool
+  rate : Int? // target RPS, None = unlimited
 } derive(Show)
 
 ///|
@@ -39,6 +40,7 @@ pub fn Config::default_with_url(url : String) -> Config {
     enable_tui: true,
     json_output: false,
     latency_correction: true,
+    rate: None,
   }
 }
 

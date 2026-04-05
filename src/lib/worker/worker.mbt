@@ -41,11 +41,16 @@ pub async fn run(
   config : @types.Config,
   on_result : (@types.RequestResult) -> Unit,
   should_stop : () -> Bool,
+  rate_limiter~ : @rate_limiter.RateLimiter? = None,
 ) -> Unit {
   let (base_url, path) = parse_url(config.url)
   let client = @http.Client::new(base_url)
   let headers = build_headers(config.headers)
   while not(should_stop()) {
+    match rate_limiter {
+      Some(rl) => rl.acquire()
+      None => ()
+    }
     let start = @bench.monotonic_clock_start()
     try {
       let response = match config.http_method {

@@ -23,3 +23,10 @@ test "rate limiter interval calculation" {
   // Can't directly test interval, but verify rate accessor
   inspect(rl.rate(), content="100")
 }
+
+///|
+test "rate limiter with rate 1000" {
+  // rate=1000 → interval = 1000/1000 = 1ms
+  let rl = RateLimiter::new(1000)
+  inspect(rl.rate(), content="1000")
+}
