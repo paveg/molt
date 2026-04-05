@@ -5,6 +5,7 @@ import {
 }
 
 options(
+  "supported-targets": "native",
   targets: {
     "tui.mbt": [ "native" ],
     "tui_test.mbt": [ "native" ],
