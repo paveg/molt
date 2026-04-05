@@ -210,3 +210,43 @@ test "format_csv_row has exactly 3 commas" {
   }
   inspect(commas, content="3")
 }
+
+///|
+test "format_csv_row zero values" {
+  let row = format_csv_row({
+    status_code: 0,
+    latency_us: 0L,
+    ttfb_us: 0L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  inspect(row.contains("0,0,"), content="true")
+}
+
+///|
+test "format_csv_row with error containing comma" {
+  let row = format_csv_row({
+    status_code: 0,
+    latency_us: 100L,
+    ttfb_us: 0L,
+    error: Some(@types.RequestError::Other("err,with,commas")),
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  // Error field should be present
+  inspect(row.contains("err"), content="true")
+}
+
+///|
+test "format_csv_row large latency" {
+  let row = format_csv_row({
+    status_code: 200,
+    latency_us: 9999999999L,
+    ttfb_us: 0L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  inspect(row.contains("9999999999"), content="true")
+}

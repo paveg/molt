@@ -112,6 +112,22 @@ async fn follow_redirects(
 }
 
 ///|
+fn make_error_result(
+  latency_us : Int64,
+  error : @types.RequestError,
+  scheduled_time_us : Int64,
+) -> @types.RequestResult {
+  {
+    status_code: 0,
+    latency_us,
+    ttfb_us: 0L,
+    error: Some(error),
+    scheduled_time_us,
+    response_size_bytes: 0L,
+  }
+}
+
+///|
 pub async fn run(
   config : @types.Config,
   on_result : (@types.RequestResult) -> Unit,
@@ -223,28 +239,20 @@ pub async fn run(
         }
         None => {
           let raw_elapsed = @bench.monotonic_clock_end(start).to_int64()
-          on_result({
-            status_code: 0,
-            latency_us: raw_elapsed,
-            ttfb_us: 0L,
-            error: Some(@types.RequestError::Timeout),
-            scheduled_time_us: scheduled_us,
-            response_size_bytes: 0L,
-          })
+          on_result(
+            make_error_result(
+              raw_elapsed,
+              @types.RequestError::Timeout,
+              scheduled_us,
+            ),
+          )
         }
       }
     } catch {
       err => {
         let raw_elapsed = @bench.monotonic_clock_end(start).to_int64()
         let error_type = classify_error(err.to_string())
-        on_result({
-          status_code: 0,
-          latency_us: raw_elapsed,
-          ttfb_us: 0L,
-          error: Some(error_type),
-          scheduled_time_us: scheduled_us,
-          response_size_bytes: 0L,
-        })
+        on_result(make_error_result(raw_elapsed, error_type, scheduled_us))
         // Reconnect: the client may be in a broken state after an error
         client.close()
         client = @http.Client::new(base_url)

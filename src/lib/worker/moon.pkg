@@ -4,6 +4,7 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbitlang/core/bench",
+  "moonbitlang/core/strconv",
 }
 
 options(

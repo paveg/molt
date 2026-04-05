@@ -60,8 +60,14 @@ cp _build/native/release/build/src/cmd/main/main.exe /usr/local/bin/molt
 ## Quick Start
 
 ```sh
-# Run a basic load test
-molt -c 10 -d 5s http://localhost:8080/api/health
+# Start the built-in test server
+molt --serve 127.0.0.1:8080 &
+
+# Run a load test against it
+molt -c 10 -d 5s http://127.0.0.1:8080/
+
+# Or test against your own server
+molt -c 10 -d 5s http://localhost:3000/api/health
 ```
 
 ## Usage Examples
@@ -220,6 +226,7 @@ Usage: molt [options] <url>
 | `--disable-keepalive` | | off | New connection per request |
 | `--redirect` | `-L` | off | Follow 3xx redirects (up to 10 hops) |
 | `--debug` | | off | Send single request, print response, exit |
+| `--serve` | | -- | Start built-in test HTTP server (e.g. `127.0.0.1:8080`) |
 | `--no-tui` | | off | Disable TUI, print periodic status lines |
 | `--json` | `-j` | off | Output results as JSON (implies `--no-tui`) |
 | `--csv` | | off | Stream per-request CSV output |

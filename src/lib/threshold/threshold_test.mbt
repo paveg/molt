@@ -65,6 +65,7 @@ fn make_config(
     debug: false,
     csv_output: false,
     max_redirects: 0,
+    serve_addr: None,
   }
 }
 

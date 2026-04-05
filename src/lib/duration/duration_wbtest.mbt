@@ -77,9 +77,32 @@ test "overflow seconds raises" {
 
 ///|
 test "max safe duration does not overflow" {
-  // 596 hours = 596 * 3600000 = 2_145_600_000 (within Int range)
   let r = Ok(parse("596h")) catch { e => Err(e) }
   inspect(r is Ok(_), content="true")
+}
+
+///|
+test "parse_count overflow k suffix" {
+  let r = Ok(parse_count("9999999k")) catch { e => Err(e) }
+  inspect(r is Err(_), content="true")
+}
+
+///|
+test "parse_count overflow m suffix" {
+  let r = Ok(parse_count("9999999m")) catch { e => Err(e) }
+  inspect(r is Err(_), content="true")
+}
+
+///|
+test "parse_count negative with suffix" {
+  let r = Ok(parse_count("-1k")) catch { e => Err(e) }
+  inspect(r is Err(_), content="true")
+}
+
+///|
+test "parse_count bare suffix no number" {
+  let r = Ok(parse_count("k")) catch { e => Err(e) }
+  inspect(r is Err(_), content="true")
 }
 
 ///|

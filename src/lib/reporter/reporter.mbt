@@ -98,6 +98,28 @@ fn write_json_lat_field(
 }
 
 ///|
+fn write_json_latency_section(
+  buf : StringBuilder,
+  name : String,
+  lat : @types.LatencyStats,
+) -> Unit {
+  buf.write_string("  \"\{name}\": {\n")
+  write_json_lat_field(buf, "p50_ms", lat.p50_us, true)
+  write_json_lat_field(buf, "p75_ms", lat.p75_us, true)
+  write_json_lat_field(buf, "p90_ms", lat.p90_us, true)
+  write_json_lat_field(buf, "p95_ms", lat.p95_us, true)
+  write_json_lat_field(buf, "p99_ms", lat.p99_us, true)
+  write_json_lat_field(buf, "p99_9_ms", lat.p99_9_us, true)
+  write_json_lat_field(buf, "max_ms", lat.max_us, true)
+  write_json_lat_field(buf, "min_ms", lat.min_us, true)
+  buf.write_string("    \"mean_ms\": \{format_double(lat.mean_us / 1000.0)},\n")
+  buf.write_string(
+    "    \"stdev_ms\": \{format_double(lat.stdev_us / 1000.0)}\n",
+  )
+  buf.write_string("  },\n")
+}
+
+///|
 pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
   let buf = StringBuilder::new()
   buf.write_string("{\n")
@@ -133,39 +155,9 @@ pub fn report_json(config : @types.Config, stats : @types.Stats) -> String {
   )
   buf.write_string("  },\n")
   // "latency" section
-  let lat = stats.latency
-  buf.write_string("  \"latency\": {\n")
-  write_json_lat_field(buf, "p50_ms", lat.p50_us, true)
-  write_json_lat_field(buf, "p75_ms", lat.p75_us, true)
-  write_json_lat_field(buf, "p90_ms", lat.p90_us, true)
-  write_json_lat_field(buf, "p95_ms", lat.p95_us, true)
-  write_json_lat_field(buf, "p99_ms", lat.p99_us, true)
-  write_json_lat_field(buf, "p99_9_ms", lat.p99_9_us, true)
-  write_json_lat_field(buf, "max_ms", lat.max_us, true)
-  write_json_lat_field(buf, "min_ms", lat.min_us, true)
-  buf.write_string("    \"mean_ms\": \{format_double(lat.mean_us / 1000.0)},\n")
-  buf.write_string(
-    "    \"stdev_ms\": \{format_double(lat.stdev_us / 1000.0)}\n",
-  )
-  buf.write_string("  },\n")
+  write_json_latency_section(buf, "latency", stats.latency)
   // "ttfb" section
-  let ttfb = stats.ttfb
-  buf.write_string("  \"ttfb\": {\n")
-  write_json_lat_field(buf, "p50_ms", ttfb.p50_us, true)
-  write_json_lat_field(buf, "p75_ms", ttfb.p75_us, true)
-  write_json_lat_field(buf, "p90_ms", ttfb.p90_us, true)
-  write_json_lat_field(buf, "p95_ms", ttfb.p95_us, true)
-  write_json_lat_field(buf, "p99_ms", ttfb.p99_us, true)
-  write_json_lat_field(buf, "p99_9_ms", ttfb.p99_9_us, true)
-  write_json_lat_field(buf, "max_ms", ttfb.max_us, true)
-  write_json_lat_field(buf, "min_ms", ttfb.min_us, true)
-  buf.write_string(
-    "    \"mean_ms\": \{format_double(ttfb.mean_us / 1000.0)},\n",
-  )
-  buf.write_string(
-    "    \"stdev_ms\": \{format_double(ttfb.stdev_us / 1000.0)}\n",
-  )
-  buf.write_string("  },\n")
+  write_json_latency_section(buf, "ttfb", stats.ttfb)
   // "status_codes" section
   buf.write_string("  \"status_codes\": {")
   let mut first = true

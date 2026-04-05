@@ -7,6 +7,24 @@ async fn main {
       panic()
     }
   }
+  // Serve mode: built-in test HTTP server
+  match config.serve_addr {
+    Some(addr) => {
+      println("molt test server listening on \{addr}")
+      println("Press Ctrl+C to stop\n")
+      let server = @http.Server::new(@socket.Addr::parse(addr))
+      server.run_forever(async fn(_request, body, conn) {
+        // Drain request body
+        while body.read_some() is Some(_) {
+
+        }
+        conn.send_response(200, "OK")
+        conn.write("{\"status\":\"ok\"}")
+      })
+      return
+    }
+    None => ()
+  }
   if config.debug {
     println("DEBUG: sending single request to \{config.url}\n")
     try {
@@ -234,6 +252,11 @@ fn parse_args() -> @types.Config raise {
         long="auth",
         about="Basic auth credentials (user:password)",
       ),
+      @argparse.OptionArg(
+        "serve",
+        long="serve",
+        about="Start built-in test HTTP server (e.g. 127.0.0.1:8080)",
+      ),
     ],
     flags=[
       @argparse.FlagArg(
@@ -417,6 +440,7 @@ fn parse_args() -> @types.Config raise {
   let csv_output = get_flag(matches, "csv")
   let redirect = get_flag(matches, "redirect")
   let max_redirects = if redirect { 10 } else { 0 }
+  let serve_addr = get_option_value_opt(matches, "serve")
   if csv_output && json_output {
     raise Failure::Failure("Cannot specify both --csv and --json")
   }
@@ -441,5 +465,6 @@ fn parse_args() -> @types.Config raise {
     debug,
     csv_output,
     max_redirects,
+    serve_addr,
   }
 }

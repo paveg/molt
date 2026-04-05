@@ -76,6 +76,24 @@ pub fn Collector::live_percentile(self : Collector, p : Double) -> Int64 {
 }
 
 ///|
+fn latency_stats_from_histogram(
+  h : @histogram.Histogram,
+) -> @types.LatencyStats {
+  {
+    p50_us: h.percentile(50.0),
+    p75_us: h.percentile(75.0),
+    p90_us: h.percentile(90.0),
+    p95_us: h.percentile(95.0),
+    p99_us: h.percentile(99.0),
+    p99_9_us: h.percentile(99.9),
+    max_us: h.max(),
+    min_us: h.min(),
+    mean_us: h.mean(),
+    stdev_us: h.stdev(),
+  }
+}
+
+///|
 pub fn Collector::finalize(
   self : Collector,
   total_time_ms : Double,
@@ -87,30 +105,8 @@ pub fn Collector::finalize(
   } else {
     0.0
   }
-  let latency : @types.LatencyStats = {
-    p50_us: self.histogram.percentile(50.0),
-    p75_us: self.histogram.percentile(75.0),
-    p90_us: self.histogram.percentile(90.0),
-    p95_us: self.histogram.percentile(95.0),
-    p99_us: self.histogram.percentile(99.0),
-    p99_9_us: self.histogram.percentile(99.9),
-    max_us: self.histogram.max(),
-    min_us: self.histogram.min(),
-    mean_us: self.histogram.mean(),
-    stdev_us: self.histogram.stdev(),
-  }
-  let ttfb : @types.LatencyStats = {
-    p50_us: self.ttfb_histogram.percentile(50.0),
-    p75_us: self.ttfb_histogram.percentile(75.0),
-    p90_us: self.ttfb_histogram.percentile(90.0),
-    p95_us: self.ttfb_histogram.percentile(95.0),
-    p99_us: self.ttfb_histogram.percentile(99.0),
-    p99_9_us: self.ttfb_histogram.percentile(99.9),
-    max_us: self.ttfb_histogram.max(),
-    min_us: self.ttfb_histogram.min(),
-    mean_us: self.ttfb_histogram.mean(),
-    stdev_us: self.ttfb_histogram.stdev(),
-  }
+  let latency = latency_stats_from_histogram(self.histogram)
+  let ttfb = latency_stats_from_histogram(self.ttfb_histogram)
   let custom_percentiles : Array[(Double, Int64)] = []
   for p in percentiles {
     custom_percentiles.push((p, self.histogram.percentile(p)))

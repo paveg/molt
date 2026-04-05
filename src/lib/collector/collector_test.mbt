@@ -454,3 +454,50 @@ test "error requests still accumulate bytes" {
   let stats = c.finalize(1000.0)
   inspect(stats.total_bytes, content="1024")
 }
+
+///|
+test "ttfb recorded in histogram" {
+  let c = @collector.Collector::new()
+  c.record({
+    status_code: 200,
+    latency_us: 10000L,
+    ttfb_us: 5000L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  c.record({
+    status_code: 200,
+    latency_us: 20000L,
+    ttfb_us: 8000L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  let stats = c.finalize(1000.0)
+  inspect(stats.ttfb.max_us > 0L, content="true")
+  inspect(stats.ttfb.min_us > 0L, content="true")
+}
+
+///|
+test "ttfb zero skips recording" {
+  let c = @collector.Collector::new()
+  c.record({
+    status_code: 200,
+    latency_us: 10000L,
+    ttfb_us: 0L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  let stats = c.finalize(1000.0)
+  inspect(stats.ttfb.max_us, content="0")
+}
+
+///|
+test "ttfb with zero requests" {
+  let c = @collector.Collector::new()
+  let stats = c.finalize(1000.0)
+  inspect(stats.ttfb.p50_us, content="0")
+  inspect(stats.ttfb.max_us, content="0")
+}

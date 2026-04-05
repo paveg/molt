@@ -120,3 +120,12 @@ test "record out of range preserves mean" {
   // mean should include the out-of-range value
   inspect(h.mean() > 100.0, content="true")
 }
+
+///|
+test "dropped_count cleared on reset" {
+  let h = Histogram::new(1000L, 3)
+  h.record(999999L)
+  inspect(h.dropped_count > 0L, content="true")
+  h.reset()
+  inspect(h.dropped_count, content="0")
+}

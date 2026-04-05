@@ -69,12 +69,18 @@ pub fn parse_count(input : String) -> Int raise {
       let num = @strconv.parse_int(num_str) catch {
         _ => raise InvalidDuration("invalid count \"\{input}\"")
       }
+      if num < 0 || num > 2147483 {
+        raise InvalidDuration("count too large: \"\{input}\"")
+      }
       num * 1000
     }
     'm' | 'M' => {
       let num_str = input[:len - 1].to_string()
       let num = @strconv.parse_int(num_str) catch {
         _ => raise InvalidDuration("invalid count \"\{input}\"")
+      }
+      if num < 0 || num > 2147 {
+        raise InvalidDuration("count too large: \"\{input}\"")
       }
       num * 1000000
     }

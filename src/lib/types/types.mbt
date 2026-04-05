@@ -37,6 +37,7 @@ pub(all) struct Config {
   debug : Bool
   csv_output : Bool
   max_redirects : Int
+  serve_addr : String?
 } derive(Show)
 
 ///|
@@ -62,6 +63,7 @@ pub fn Config::default_with_url(url : String) -> Config {
     debug: false,
     csv_output: false,
     max_redirects: 0,
+    serve_addr: None,
   }
 }
 

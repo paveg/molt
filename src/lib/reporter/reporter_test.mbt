@@ -181,6 +181,7 @@ test "report_json with RequestCount mode" {
     debug: false,
     csv_output: false,
     max_redirects: 0,
+    serve_addr: None,
   }
   let stats = make_test_stats()
   let json = @reporter.report_json(config, stats)
@@ -229,6 +230,7 @@ test "report_json with rate set" {
     debug: false,
     csv_output: false,
     max_redirects: 0,
+    serve_addr: None,
   }
   let stats = make_test_stats()
   let json = @reporter.report_json(config, stats)
