@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: moon install
+
+      - name: Check (native)
+        run: moon check --target native
+
+      - name: Format check
+        run: |
+          moon fmt
+          git diff --exit-code
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: moon install
+
+      - name: Test (wasm-gc)
+        run: moon test
+
+      - name: Test (native)
+        run: moon test --target native
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [check, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: moon install
+
+      - name: Build native binary
+        run: moon build --target native
+
+      - name: Verify binary exists
+        run: test -f _build/native/debug/build/src/cmd/main/main.exe
+
+      - name: Show binary size
+        run: ls -lh _build/native/debug/build/src/cmd/main/main.exe
+
+      - name: Smoke test
+        run: ./_build/native/debug/build/src/cmd/main/main.exe --help
