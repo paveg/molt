@@ -1,5 +1,6 @@
 import {
   "paveg/molt/src/lib/types",
+  "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbitlang/core/bench",
 }
