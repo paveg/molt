@@ -56,3 +56,15 @@ test "rate limiter with rate 1 interval" {
   let rl = RateLimiter::new(1)
   inspect(rl.rate(), content="1")
 }
+
+///|
+test "rate accessor returns clamped value" {
+  let rl = RateLimiter::new(500)
+  inspect(rl.rate(), content="500")
+}
+
+///|
+test "rate accessor after negative clamp" {
+  let rl = RateLimiter::new(-10)
+  inspect(rl.rate(), content="1")
+}

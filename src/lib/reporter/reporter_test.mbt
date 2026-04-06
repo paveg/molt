@@ -451,3 +451,43 @@ test "report_text hides throughput when no bytes" {
   let text = @reporter.report_text(stats)
   inspect(text.contains("Throughput"), content="false")
 }
+
+///|
+test "report_text shows TTFB when present" {
+  let stats = @types.Stats::new(
+    total_requests=100,
+    successful=100,
+    failed=0,
+    total_time_ms=1000.0,
+    requests_per_sec=100.0,
+    latency=@types.LatencyStats::new(
+      p50_us=1000L,
+      p75_us=2000L,
+      p90_us=3000L,
+      p95_us=4000L,
+      p99_us=5000L,
+      p99_9_us=6000L,
+      max_us=7000L,
+      min_us=500L,
+      mean_us=1500.0,
+      stdev_us=800.0,
+    ),
+    ttfb=@types.LatencyStats::new(
+      p50_us=800L,
+      p75_us=1500L,
+      p90_us=2500L,
+      p95_us=3500L,
+      p99_us=4500L,
+      p99_9_us=5500L,
+      max_us=6500L,
+      min_us=400L,
+      mean_us=1200.0,
+      stdev_us=700.0,
+    ),
+    status_codes={ 200: 100 },
+    errors={},
+  )
+  let text = @reporter.report_text(stats)
+  inspect(text.contains("TTFB"), content="true")
+  inspect(text.contains("p50"), content="true")
+}

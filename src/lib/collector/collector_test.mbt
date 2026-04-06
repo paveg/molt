@@ -516,3 +516,68 @@ test "599 counted as server error" {
   let stats = c.finalize(1000.0)
   inspect(stats.failed, content="1")
 }
+
+///|
+test "live_percentile returns cached values" {
+  let c = @collector.Collector::new()
+  for i in 1..<=200 {
+    c.record({
+      status_code: 200,
+      latency_us: (i * 100).to_int64(),
+      ttfb_us: 0L,
+      error: None,
+      scheduled_time_us: 0L,
+      response_size_bytes: 0L,
+    })
+  }
+  // After 200 records, cache should be populated
+  let p50 = c.live_percentile(50.0)
+  let p99 = c.live_percentile(99.0)
+  inspect(p50 > 0L, content="true")
+  inspect(p99 > 0L, content="true")
+  inspect(p99 > p50, content="true")
+}
+
+///|
+test "total_requests and failed_count accessors" {
+  let c = @collector.Collector::new()
+  inspect(c.total_requests(), content="0")
+  inspect(c.failed_count(), content="0")
+  c.record({
+    status_code: 200,
+    latency_us: 1000L,
+    ttfb_us: 0L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  c.record({
+    status_code: 0,
+    latency_us: 0L,
+    ttfb_us: 0L,
+    error: Some(@types.RequestError::Timeout),
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  inspect(c.total_requests(), content="2")
+  inspect(c.failed_count(), content="1")
+}
+
+///|
+test "reset clears cached percentiles" {
+  let c = @collector.Collector::new()
+  for i in 1..<=200 {
+    c.record({
+      status_code: 200,
+      latency_us: (i * 100).to_int64(),
+      ttfb_us: 0L,
+      error: None,
+      scheduled_time_us: 0L,
+      response_size_bytes: 0L,
+    })
+  }
+  let _ = c.live_percentile(50.0)
+  c.reset()
+  inspect(c.live_percentile(50.0), content="0")
+  inspect(c.total_requests(), content="0")
+}
