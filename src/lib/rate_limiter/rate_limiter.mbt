@@ -21,14 +21,14 @@ pub fn RateLimiter::start(
     return
   }
   let interval_ms = if 1000 / self.rate < 1 { 1 } else { 1000 / self.rate }
+  let interval_ms_i64 = interval_ms.to_int64()
   group.spawn_bg(async fn() {
     let start = @async.now()
     let mut token_index : Int64 = 0L
     while true {
       self.queue.put(())
       token_index = token_index + 1L
-      // Absolute deadline: start + token_index * interval
-      let next_deadline = start + token_index * interval_ms.to_int64()
+      let next_deadline = start + token_index * interval_ms_i64
       let now = @async.now()
       let wait = next_deadline - now
       if wait > 0L {

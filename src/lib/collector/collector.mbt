@@ -7,6 +7,10 @@ pub struct Collector {
   priv status_codes : Map[Int, Int]
   priv errors : Map[String, Int]
   priv mut total_bytes : Int64
+  // Cached percentiles for TUI (updated every N records)
+  priv mut cached_p50 : Int64
+  priv mut cached_p99 : Int64
+  priv mut cache_stale : Int // records since last cache update
 }
 
 ///|
@@ -19,6 +23,9 @@ pub fn Collector::new() -> Collector {
     status_codes: {},
     errors: {},
     total_bytes: 0L,
+    cached_p50: 0L,
+    cached_p99: 0L,
+    cache_stale: 0,
   }
 }
 
@@ -31,6 +38,22 @@ pub fn Collector::reset(self : Collector) -> Unit {
   self.status_codes.clear()
   self.errors.clear()
   self.total_bytes = 0L
+  self.cached_p50 = 0L
+  self.cached_p99 = 0L
+  self.cache_stale = 0
+}
+
+///|
+
+///|
+/// Increment a map counter, combining get+set into a single pattern.
+fn increment_counter(m : Map[Int, Int], key : Int) -> Unit {
+  m[key] = m.get(key).unwrap_or(0) + 1
+}
+
+///|
+fn increment_str_counter(m : Map[String, Int], key : String) -> Unit {
+  m[key] = m.get(key).unwrap_or(0) + 1
 }
 
 ///|
@@ -40,20 +63,19 @@ pub fn Collector::record(
 ) -> Unit {
   self.total_requests = self.total_requests + 1
   self.total_bytes = self.total_bytes + result.response_size_bytes
+  self.cache_stale = self.cache_stale + 1
   match result.error {
     Some(err) => {
       self.failed = self.failed + 1
-      let key = err.to_string()
-      self.errors[key] = self.errors.get(key).unwrap_or(0) + 1
+      increment_str_counter(self.errors, err.to_string())
     }
     None => {
       self.histogram.record(result.latency_us)
       if result.ttfb_us > 0L {
         self.ttfb_histogram.record(result.ttfb_us)
       }
-      let code = result.status_code
-      self.status_codes[code] = self.status_codes.get(code).unwrap_or(0) + 1
-      if code >= 500 {
+      increment_counter(self.status_codes, result.status_code)
+      if result.status_code >= 500 {
         self.failed = self.failed + 1
       }
     }
@@ -71,8 +93,18 @@ pub fn Collector::failed_count(self : Collector) -> Int {
 }
 
 ///|
+/// Returns cached p50/p99 for TUI display. Refreshes every 100 records.
 pub fn Collector::live_percentile(self : Collector, p : Double) -> Int64 {
-  self.histogram.percentile(p)
+  if self.cache_stale > 100 {
+    self.cached_p50 = self.histogram.percentile(50.0)
+    self.cached_p99 = self.histogram.percentile(99.0)
+    self.cache_stale = 0
+  }
+  if p <= 50.0 {
+    self.cached_p50
+  } else {
+    self.cached_p99
+  }
 }
 
 ///|
