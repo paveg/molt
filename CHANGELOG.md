@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/paveg/molt/compare/molt-v0.1.3...molt-v0.1.4) (2026-04-06)
+
+
+### Bug Fixes
+
+* 4 bugs, 9 boundary tests, rate limiter bounded queue ([5fe50f9](https://github.com/paveg/molt/commit/5fe50f91ece55965a2b31dead32da6dec9e44230))
+
 ## [0.1.3](https://github.com/paveg/molt/compare/molt-v0.1.2...molt-v0.1.3) (2026-04-05)
 
 
