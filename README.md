@@ -8,36 +8,43 @@ A lightweight, fast HTTP load testing tool inspired by [oha](https://github.com/
 
 ## Features
 
-- **High-performance concurrent load generation** with configurable worker count
-- **HDR Histogram latency recording** -- Gil Tene algorithm with 3 significant figures, O(1) per record
-- **Real-time TUI dashboard** -- live RPS, p50/p99, progress bar via [mizchi/tui](https://mooncakes.io/docs/mizchi/tui)
-- **Multiple output modes** -- TUI (default), plain text (`--no-tui`), JSON (`--json`)
-- **Full HTTP method support** -- GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS with custom headers and body
-- **Flexible test modes** -- by duration (`-d 30s`) or by total request count (`-n 10000`)
-- **Accurate percentiles** -- p50, p75, p90, p95, p99, p99.9 via HDR Histogram
-- **Rate limiting** -- fixed RPS mode with token bucket (`--rate`)
-- **Coordinated Omission correction** -- accurate latency under rate-limited load
-- **Per-request timeout** -- configurable via `--timeout`
-- **Error classification** -- timeout, connection refused, reset, DNS, TLS errors
-- **SLA thresholds** -- `--latency-threshold` and `--error-threshold` for CI pass/fail (exit code 3)
-- **Warm-up phase** -- `--warm-up 3s` excludes initial requests from statistics
-- **Custom percentiles** -- `--percentiles 50,90,99,99.99`
-- **Time-series output** -- per-second RPS/latency snapshots in JSON
-- **Response size tracking** -- total bytes and bytes/sec in output
-- **Basic Auth** -- `--auth user:password`
-- **TTFB tracking** -- Time to First Byte measured separately from total latency
-- **CSV output** -- per-request streaming CSV (`--csv`)
-- **Debug mode** -- single request with full response dump (`--debug`)
-- **Redirect following** -- `--redirect` / `-L` follows 3xx up to 10 hops
-- **Keep-alive control** -- `--disable-keepalive` for connection pool testing
-- **Count suffixes** -- `-n 10k`, `-n 1m` for convenience
-- **Small binary** -- ~2.3 MB standalone native executable
+**Load Generation**
+- Configurable concurrent connections (`-c`)
+- Duration (`-d 30s`) or request count (`-n 10k`) modes
+- Fixed-rate mode with token bucket (`--rate`)
+- Warm-up phase excluded from stats (`--warm-up`)
+- Built-in test server (`--serve`)
+
+**Measurement**
+- Gil Tene HDR Histogram (3 significant figures, O(1) per record)
+- TTFB (Time to First Byte) tracked separately
+- Coordinated Omission correction under rate-limited load
+- Custom percentiles (`--percentiles 50,90,99,99.99`)
+- Response size tracking (bytes/sec)
+
+**HTTP**
+- All common methods: GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS
+- Custom headers (`-H`), request body (`-b`, `-B`)
+- Basic Auth (`--auth`), redirect following (`-L`)
+- Per-request timeout (`-t`), keep-alive control
+
+**Output**
+- Real-time TUI dashboard (default)
+- Plain text with periodic status (`--no-tui`)
+- JSON with time-series data (`--json`)
+- Streaming CSV per request (`--csv`)
+- Debug mode: single request dump (`--debug`)
+
+**CI/CD**
+- SLA thresholds with exit codes (`--latency-threshold`, `--error-threshold`)
+- Exit 0 (success), 1 (config error), 2 (test failures), 3 (threshold violation)
+- Automated releases via release-please
 
 ## Installation
 
 ### Pre-built binary
 
-Download from [GitHub Releases](https://github.com/paveg/molt/releases) (when available):
+Download from [GitHub Releases](https://github.com/paveg/molt/releases):
 
 ```sh
 # macOS (Apple Silicon)
@@ -49,7 +56,7 @@ curl -sL https://github.com/paveg/molt/releases/latest/download/molt-linux-amd64
 sudo mv molt /usr/local/bin/
 ```
 
-### Build from source (recommended)
+### Build from source
 
 Requires [MoonBit](https://www.moonbitlang.com/) toolchain.
 
@@ -69,60 +76,40 @@ molt --serve 127.0.0.1:8080 &
 molt -c 10 -d 5s http://127.0.0.1:8080/
 
 # Or test against your own server
-molt -c 10 -d 5s http://localhost:3000/api/health
+molt -c 50 -d 30s http://localhost:3000/api/health
 ```
 
 ## Usage Examples
 
 ```sh
-# Basic GET -- 50 connections, 10 seconds (defaults)
+# Basic GET (50 connections, 10 seconds)
 molt http://localhost:8080/
 
-# Custom connections and duration
-molt -c 100 -d 30s http://localhost:8080/api/health
+# POST with JSON body
+molt -m POST -H 'Content-Type: application/json' \
+  -b '{"name":"test"}' -c 20 -d 15s http://localhost:8080/api/users
 
-# POST with JSON body and headers
-molt -m POST \
-  -H 'Content-Type: application/json' \
-  -b '{"name":"test","value":42}' \
-  -c 20 -d 15s \
-  http://localhost:8080/api/users
-
-# Fixed request count instead of duration
-molt -n 10000 -c 50 http://localhost:8080/
-
-# JSON output for CI pipelines
-molt --json -c 50 -d 10s http://localhost:8080/ > results.json
-
-# Fixed rate: 500 requests per second
+# Fixed rate: 500 RPS
 molt -r 500 -c 50 -d 30s http://localhost:8080/
 
-# Custom timeout (5 seconds per request)
-molt -t 5s -c 10 -d 10s http://localhost:8080/slow-endpoint
+# Request count with suffix
+molt -n 10k -c 50 http://localhost:8080/
 
-# Request body from file
-molt -m POST -H 'Content-Type: application/json' -B payload.json \
-  -c 10 -d 10s http://localhost:8080/api/data
-
-# SLA enforcement in CI (exit 3 if p99 > 100ms or error rate > 1%)
+# SLA enforcement in CI
 molt --latency-threshold 100ms --error-threshold 1.0 \
   -c 50 -d 30s http://localhost:8080/api/health
 
-# Warm-up: skip first 5 seconds from statistics
+# JSON output for pipelines
+molt --json -d 10s http://localhost:8080/ > results.json
+
+# Warm-up: skip first 5 seconds
 molt --warm-up 5s -c 20 -d 30s http://localhost:8080/
 
-# Basic auth
-molt --auth admin:secret -c 10 -d 10s http://localhost:8080/api/protected
+# Basic auth + custom timeout
+molt --auth admin:secret -t 5s -c 10 -d 10s http://localhost:8080/api/protected
 
-# Custom percentiles
-molt --percentiles 50,90,99,99.99 -c 10 -d 10s http://localhost:8080/
-
-# PATCH request
-molt -m PATCH -H 'Content-Type: application/json' -b '{"status":"active"}' \
-  -c 5 -d 10s http://localhost:8080/api/users/1
-
-# Plain text mode (no TUI, prints periodic status lines)
-molt --no-tui -c 10 -d 10s http://localhost:8080/
+# Debug: inspect single request
+molt --debug http://localhost:8080/api/health
 ```
 
 ## Sample Output
@@ -150,28 +137,24 @@ Summary:
   Requests/sec:      19240.57
 
 Latency Distribution:
-  p50.00  0.20ms
-  p75.00  0.30ms
-  p90.00  0.39ms
-  p95.00  0.48ms
-  p99.00  1.21ms
-  p99.90  4.35ms
+  p50.00  0.20ms      p90.00  0.39ms
+  p75.00  0.30ms      p95.00  0.48ms
+  p99.00  1.21ms      p99.90  4.35ms
   max     12.56ms
 
-  mean    0.25ms
-  stdev   0.31ms
+  mean    0.25ms      stdev   0.31ms
 
 TTFB (Time to First Byte):
-  p50     0.19ms
-  p99     1.20ms
-  max     12.56ms
-  mean    0.25ms
+  p50  0.19ms   p99  1.20ms   max  12.56ms
 
 Status Codes:
   200: 57727
 ```
 
 ### JSON mode (`--json`)
+
+<details>
+<summary>Full JSON output</summary>
 
 ```json
 {
@@ -193,22 +176,21 @@ Status Codes:
   "latency": {
     "p50_ms": 0.09, "p75_ms": 0.10, "p90_ms": 0.13,
     "p95_ms": 0.18, "p99_ms": 0.31, "p99_9_ms": 0.77,
-    "max_ms": 2.05, "min_ms": 0.06, "mean_ms": 0.10, "stdev_ms": 0.06
+    "max_ms": 2.05, "min_ms": 0.06,
+    "mean_ms": 0.10, "stdev_ms": 0.06
   },
-  "ttfb": {
-    "p50_ms": 0.09, "p75_ms": 0.09, "p90_ms": 0.12,
-    "p95_ms": 0.17, "p99_ms": 0.30, "p99_9_ms": 0.77,
-    "max_ms": 2.04, "min_ms": 0.06, "mean_ms": 0.10, "stdev_ms": 0.06
-  },
+  "ttfb": { "p50_ms": 0.09, "p99_ms": 0.30, "max_ms": 2.04 },
   "status_codes": { "200": 19155 },
   "errors": {},
   "custom_percentiles": { "p50.00_ms": 0.09, "p99.00_ms": 0.31 },
   "throughput": { "total_bytes": 0, "bytes_per_sec": 0.00 },
   "time_series": [
-    { "elapsed_sec": 1.00, "requests": 19155, "rps": 19155.0, "p50_us": 91, "p99_us": 311, "errors": 0 }
+    { "elapsed_sec": 1.0, "requests": 19155, "rps": 19155.0, "p50_us": 91, "p99_us": 311, "errors": 0 }
   ]
 }
 ```
+
+</details>
 
 ## CLI Reference
 
@@ -218,108 +200,79 @@ Usage: molt [options] <url>
 
 | Option | Short | Default | Description |
 |---|---|---|---|
-| `--connections` | `-c` | `50` | Number of concurrent connections |
+| **Load Control** | | | |
+| `--connections` | `-c` | `50` | Concurrent connections |
 | `--duration` | `-d` | `10s` | Test duration (`10s`, `1m`, `1m30s`) |
-| `--requests` | `-n` | -- | Total request count (mutually exclusive with `-d`) |
-| `--method` | `-m` | `GET` | HTTP method: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS` |
-| `--header` | `-H` | -- | Custom header, repeatable (`-H 'K: V'`) |
-| `--body` | `-b` | -- | Request body string |
-| `--body-file` | `-B` | -- | Request body from file (mutually exclusive with `-b`) |
+| `--requests` | `-n` | -- | Total request count, supports `10k`/`1m` suffixes |
 | `--rate` | `-r` | -- | Target requests per second |
-| `--timeout` | `-t` | `30s` | Per-request timeout (`5s`, `1m`) |
-| `--latency-threshold` | | -- | Fail if p99 exceeds value (e.g. `100ms`), exit code 3 |
-| `--error-threshold` | | -- | Fail if error rate exceeds percentage (e.g. `1.0`) |
-| `--warm-up` | | -- | Exclude initial period from stats (e.g. `3s`) |
-| `--percentiles` | | `50,75,90,95,99,99.9` | Custom percentiles (comma-separated) |
-| `--auth` | | -- | Basic auth credentials (`user:password`) |
-| `--insecure` | `-k` | off | Skip TLS certificate verification (pending [upstream](https://github.com/moonbitlang/async/issues/329)) |
-| `--disable-keepalive` | | off | New connection per request |
+| `--warm-up` | | -- | Exclude initial period from stats (`3s`) |
+| **HTTP** | | | |
+| `--method` | `-m` | `GET` | HTTP method |
+| `--header` | `-H` | -- | Custom header, repeatable |
+| `--body` | `-b` | -- | Request body string |
+| `--body-file` | `-B` | -- | Request body from file |
+| `--auth` | | -- | Basic auth (`user:password`) |
+| `--timeout` | `-t` | `30s` | Per-request timeout |
 | `--redirect` | `-L` | off | Follow 3xx redirects (up to 10 hops) |
-| `--debug` | | off | Send single request, print response, exit |
-| `--serve` | | -- | Start built-in test HTTP server (e.g. `127.0.0.1:8080`) |
-| `--no-tui` | | off | Disable TUI, print periodic status lines |
-| `--json` | `-j` | off | Output results as JSON (implies `--no-tui`) |
-| `--csv` | | off | Stream per-request CSV output |
-| `--help` | `-h` | | Show help |
-| `--version` | `-V` | | Show version |
+| `--disable-keepalive` | | off | New connection per request |
+| `--insecure` | `-k` | off | Skip TLS verification ([pending upstream](https://github.com/moonbitlang/async/issues/329)) |
+| **Output** | | | |
+| `--no-tui` | | off | Plain text with periodic status |
+| `--json` | `-j` | off | JSON output (implies `--no-tui`) |
+| `--csv` | | off | Streaming per-request CSV |
+| `--percentiles` | | `50,75,90,95,99,99.9` | Custom percentiles |
+| **CI/CD** | | | |
+| `--latency-threshold` | | -- | Fail if p99 exceeds value (`100ms`), exit 3 |
+| `--error-threshold` | | -- | Fail if error rate exceeds % (`1.0`), exit 3 |
+| **Other** | | | |
+| `--debug` | | off | Single request with full response dump |
+| `--serve` | | -- | Start built-in test server (`127.0.0.1:8080`) |
 
 ## Architecture
 
-```
-                         ┌──────────────┐
-                         │  CLI Parser  │
-                         │  (argparse)  │
-                         └──────┬───────┘
-                                │ Config
-                                v
-                         ┌──────────────┐
-                         │ Coordinator  │
-                         │  (TaskGroup) │
-                         └──┬───────┬───┘
-                            │       │
-                   ┌────────┘       └────────┐
-                   v                         v
-            ┌────────────┐  ...  ┌────────────┐
-            │  Worker 1  │       │  Worker N  │
-            │ HTTP Client│       │ HTTP Client│
-            └─────┬──────┘       └─────┬──────┘
-                  │                     │
-                  v                     v
-            ┌─────────────────────────────────┐
-            │       Collector (HDR Histogram) │
-            └────────────────┬────────────────┘
-                             │
-                    ┌────────┴────────┐
-                    v                 v
-             ┌────────────┐   ┌────────────┐
-             │  TUI / CLI │   │  Reporter  │
-             │  (live)    │   │(text/JSON) │
-             └────────────┘   └────────────┘
+```mermaid
+graph TD
+    CLI["CLI Parser<br/>(argparse)"] -->|Config| COORD["Coordinator<br/>(TaskGroup)"]
+    COORD --> W1["Worker 1<br/>HTTP Client"]
+    COORD --> W2["Worker 2<br/>HTTP Client"]
+    COORD --> WN["Worker N<br/>HTTP Client"]
+    COORD -->|optional| RL["Rate Limiter<br/>(Token Bucket)"]
+    RL -.->|acquire| W1
+    RL -.->|acquire| W2
+    RL -.->|acquire| WN
+    W1 -->|RequestResult| COLL["Collector<br/>(HDR Histogram)"]
+    W2 -->|RequestResult| COLL
+    WN -->|RequestResult| COLL
+    COLL -->|live stats| TUI["TUI / Plain"]
+    COLL -->|Stats| REP["Reporter<br/>(text / JSON / CSV)"]
+    COLL -->|Stats| THR["Threshold<br/>Check"]
 ```
 
 ### Packages
 
 | Package | Description |
 |---|---|
-| `cmd/main` | CLI entry point, argument parsing, TUI wiring |
-| `lib/types` | Shared types: `Config`, `Stats`, `RequestResult`, `HttpMethod` |
-| `lib/worker` | Async HTTP request loop with latency measurement |
-| `lib/coordinator` | Structured concurrency via `TaskGroup`, worker lifecycle |
-| `lib/collector` | Aggregates results using HDR Histogram |
-| `lib/histogram` | Gil Tene HDR Histogram (3 significant figures, 1us-1h range) |
-| `lib/reporter` | Text and JSON output formatting |
-| `lib/tui` | Real-time TUI state management and VNode rendering |
-| `lib/duration` | Duration string parser (`"10s"`, `"1m30s"` -> ms) |
-| `lib/rate_limiter` | Token bucket rate limiter for `--rate` mode |
-| `lib/threshold` | SLA threshold checking for `--latency-threshold` / `--error-threshold` |
-
-## How It Works
-
-1. **CLI Parser** parses arguments into a `Config` struct
-2. **Coordinator** spawns N async Worker tasks via `TaskGroup`
-3. Each **Worker** maintains a persistent HTTP connection (`Client::new`) and loops sending requests
-4. Latency is measured with `@bench.monotonic_clock_start/end` (microsecond precision)
-5. Results flow to the **Collector** which records them in an **HDR Histogram**
-6. During the test, the **TUI** polls the Collector every 500ms for live updates
-7. After completion, the **Reporter** formats the final `Stats` as text or JSON
+| `cmd/main` | CLI parsing (`cli.mbt`) and orchestration (`main.mbt`) |
+| `lib/types` | `Config`, `Stats`, `RequestResult`, `HttpMethod`, `base64_encode` |
+| `lib/worker` | Async HTTP loop, TTFB, redirect, reconnection |
+| `lib/coordinator` | `TaskGroup` orchestration, warm-up, time-series capture |
+| `lib/collector` | Result aggregation with dual HDR Histogram (latency + TTFB) |
+| `lib/histogram` | Gil Tene HDR Histogram (3 sig fig, 1us-1h, O(1) record) |
+| `lib/reporter` | Text (`text.mbt`), JSON (`json.mbt`), CSV (`csv.mbt`), format helpers |
+| `lib/tui` | Real-time TUI via [mizchi/tui](https://mooncakes.io/docs/mizchi/tui) |
+| `lib/duration` | Duration/count parser (`"10s"`, `"1m30s"`, `"10k"`) |
+| `lib/rate_limiter` | Absolute-deadline token bucket |
+| `lib/threshold` | SLA threshold checking |
 
 ## Development
 
 ```sh
-# Build native binary
-moon build --target native
-
-# Run all tests (231 tests)
-moon test --target native
-
-# Format code
-moon fmt
-
-# Type check without building
-moon check --target native
-
-# Run directly via moon
-moon run src/cmd/main --target native -- -c 5 -d 3s http://localhost:8080/
+moon build --target native            # build
+moon build --target native --release  # release build (~2.3 MB)
+moon test --target native             # all 241 tests
+moon test                             # wasm-gc subset
+moon fmt                              # format
+moon check --target native            # type check
 ```
 
 ## Comparison
@@ -329,41 +282,18 @@ moon run src/cmd/main --target native -- -c 5 -d 3s http://localhost:8080/
 | Language | MoonBit | Rust | Go | Go |
 | HDR Histogram | Yes (3 sig fig) | Yes | No | Yes |
 | TUI | Yes | Yes | No | No |
-| TTFB tracking | Yes | Yes | No | No |
+| TTFB | Yes | Yes | No | No |
 | CO correction | Yes | Yes | No | Yes |
 | SLA thresholds | Yes (exit 3) | Partial | No | Yes |
-| CSV output | Yes (streaming) | Yes | Yes | No |
-| HTTP methods | 7 | All | All | All |
+| CSV | Yes (streaming) | Yes | Yes | No |
 | HTTP/2 | No (planned) | Yes (+HTTP/3) | Yes | Yes |
-| Redirects | Yes | Yes | No | Yes |
 | Scenarios | No | No | No | Yes (JS) |
-| Binary size | ~2.3 MB | ~3 MB | ~5 MB | ~40 MB |
+| Binary | ~2.3 MB | ~3 MB | ~5 MB | ~40 MB |
 
 ## Roadmap
 
-- [x] `--rate` flag with absolute-deadline token bucket rate limiting
-- [x] Coordinated Omission correction
-- [x] `--timeout` per-request timeout enforcement
-- [x] `--body-file` for loading request body from file
-- [x] Error classification (timeout, connection refused, DNS error, TLS error)
-- [x] `--latency-threshold` / `--error-threshold` SLA enforcement (exit code 3)
-- [x] `--warm-up` exclude initial requests from stats
-- [x] `--percentiles` custom percentile selection
-- [x] Time-series per-second snapshots in JSON output
-- [x] Response size tracking (total bytes, bytes/sec)
-- [x] `--auth` Basic authentication
-- [x] `--insecure` TLS verification skip (pending upstream support)
-- [x] PATCH, HEAD, OPTIONS HTTP methods
-- [x] Connection reconnection on server-side close
-- [x] TTFB (Time to First Byte) separate tracking
-- [x] `--csv` per-request streaming CSV output
-- [x] `--debug` single request diagnostic mode
-- [x] `--redirect` / `-L` follow 3xx redirects
-- [x] `--disable-keepalive` connection pool testing
-- [x] `-n 10k` / `-n 1m` count suffixes
-- [x] Histogram dropped value tracking (correctness fix)
-- [ ] `--http2` HTTP/2 support (upstream PR moonbitlang/async#305 in progress)
-- [ ] `--insecure` actual TLS skip (upstream issue moonbitlang/async#329)
+- [ ] `--http2` HTTP/2 support ([upstream PR](https://github.com/moonbitlang/async/pull/305) in progress)
+- [ ] `--insecure` actual TLS skip ([upstream issue](https://github.com/moonbitlang/async/issues/329))
 
 ## License
 
