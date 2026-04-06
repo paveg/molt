@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/paveg/molt/compare/molt-v0.1.4...molt-v0.1.5) (2026-04-06)
+
+
+### Performance Improvements
+
+* hot path optimizations for high-throughput scenarios ([ac65576](https://github.com/paveg/molt/commit/ac65576b499900bf3efaf598842263dfc4890a6d))
+
 ## [0.1.4](https://github.com/paveg/molt/compare/molt-v0.1.3...molt-v0.1.4) (2026-04-06)
 
 
