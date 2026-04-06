@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/paveg/molt/compare/molt-v0.1.5...molt-v0.1.6) (2026-04-06)
+
+
+### Bug Fixes
+
+* replace deprecated starts_with/ends_with with has_prefix/has_suffix ([0555710](https://github.com/paveg/molt/commit/055571069de1eebcaf6891d4a0c2050a6c712bf4))
+
 ## [0.1.5](https://github.com/paveg/molt/compare/molt-v0.1.4...molt-v0.1.5) (2026-04-06)
 
 
