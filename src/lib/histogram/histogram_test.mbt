@@ -110,3 +110,22 @@ test "record zero value from blackbox" {
   inspect(h.min(), content="0")
   inspect(h.max(), content="0")
 }
+
+///|
+test "percentile negative returns min or zero" {
+  let h = @histogram.Histogram::new(100000L, 3)
+  for i in 1..<=100 {
+    h.record(i.to_int64())
+  }
+  let p = h.percentile(-10.0)
+  inspect(p >= 0L, content="true")
+}
+
+///|
+test "percentile over 100 returns max" {
+  let h = @histogram.Histogram::new(100000L, 3)
+  for i in 1..<=100 {
+    h.record(i.to_int64())
+  }
+  inspect(h.percentile(150.0), content="100")
+}

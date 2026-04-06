@@ -250,3 +250,22 @@ test "format_csv_row large latency" {
   })
   inspect(row.contains("9999999999"), content="true")
 }
+
+///|
+test "format_csv_row with comma in error produces valid CSV" {
+  let row = format_csv_row({
+    status_code: 0,
+    latency_us: 100L,
+    ttfb_us: 0L,
+    error: Some(@types.RequestError::Other("error,with,commas")),
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  // The error field containing commas must be wrapped in double quotes
+  // so CSV parsers treat it as a single field.
+  // Expected: 100,0,"Other(error,with,commas)",0
+  inspect(
+    row.contains("\"") && row.starts_with("100,0,\"") && row.ends_with(",0"),
+    content="true",
+  )
+}

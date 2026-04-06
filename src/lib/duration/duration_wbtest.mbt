@@ -146,3 +146,19 @@ test "parse_count uppercase K" {
 test "parse_count uppercase M" {
   inspect(parse_count("2M"), content="2000000")
 }
+
+///|
+test "parse uppercase H" {
+  inspect(parse("5H"), content="18000000")
+}
+
+///|
+test "parse uppercase S" {
+  inspect(parse("30S"), content="30000")
+}
+
+///|
+test "parse mixed case" {
+  // 1H = 3600000ms, 30s = 30000ms, total = 3630000ms
+  inspect(parse("1H30s"), content="3630000")
+}

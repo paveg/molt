@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "paveg/molt/src/lib/reporter"
+
+import {
+  "paveg/molt/src/lib/types",
+}
+
+// Values
+pub let csv_header : String
+
+pub fn format_csv_row(@types.RequestResult) -> String
+
+pub fn report_json(@types.Config, @types.Stats) -> String
+
+pub fn report_text(@types.Stats) -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

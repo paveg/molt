@@ -7,7 +7,7 @@ pub struct RateLimiter {
 ///|
 pub fn RateLimiter::new(rate : Int) -> RateLimiter {
   let safe_rate = if rate < 1 { 1 } else { rate }
-  { rate: safe_rate, queue: @aqueue.Queue::new(kind=Unbounded) }
+  { rate: safe_rate, queue: @aqueue.Queue::new(kind=DiscardLatest(100)) }
 }
 
 ///|

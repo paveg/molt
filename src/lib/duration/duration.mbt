@@ -13,7 +13,7 @@ pub fn parse(input : String) -> Int raise {
   let mut has_unit = false
   for i, c in input {
     match c {
-      'h' | 'm' | 's' => {
+      'h' | 'H' | 'm' | 'M' | 's' | 'S' => {
         guard i > num_start else {
           raise InvalidDuration("missing number before '\{c}' in \"\{input}\"")
         }
@@ -25,9 +25,9 @@ pub fn parse(input : String) -> Int raise {
             )
         }
         let multiplier = match c {
-          'h' => 3600000
-          'm' => 60000
-          's' => 1000
+          'h' | 'H' => 3600000
+          'm' | 'M' => 60000
+          's' | 'S' => 1000
           _ => 0
         }
         let product = n * multiplier

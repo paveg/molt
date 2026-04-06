@@ -137,7 +137,12 @@ pub async fn run(
   num_workers? : Int = 1,
 ) -> Unit {
   let (base_url, path) = parse_url(config.url)
-  let mut client = @http.Client::new(base_url)
+  let mut client = @http.Client::new(base_url) catch {
+    err => {
+      on_result(make_error_result(0L, classify_error(err.to_string()), 0L))
+      return
+    }
+  }
   let headers = build_headers(config.headers)
   let epoch_us = @bench.monotonic_clock_end(@bench.monotonic_clock_start()).to_int64()
   let use_co = config.latency_correction && rate_limiter is Some(_)
@@ -234,7 +239,14 @@ pub async fn run(
           })
           if config.disable_keepalive {
             client.close()
-            client = @http.Client::new(base_url)
+            client = @http.Client::new(base_url) catch {
+              err => {
+                on_result(
+                  make_error_result(0L, classify_error(err.to_string()), 0L),
+                )
+                return
+              }
+            }
           }
         }
         None => {
@@ -255,7 +267,18 @@ pub async fn run(
         on_result(make_error_result(raw_elapsed, error_type, scheduled_us))
         // Reconnect: the client may be in a broken state after an error
         client.close()
-        client = @http.Client::new(base_url)
+        client = @http.Client::new(base_url) catch {
+          reconnect_err => {
+            on_result(
+              make_error_result(
+                0L,
+                classify_error(reconnect_err.to_string()),
+                0L,
+              ),
+            )
+            return
+          }
+        }
       }
     }
     request_index = request_index + 1

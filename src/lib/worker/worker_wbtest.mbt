@@ -294,3 +294,9 @@ test "compute_scheduled_time negative rate returns epoch" {
   )
   inspect(scheduled, content="1000000")
 }
+
+///|
+test "classify_error empty string" {
+  let err = classify_error("")
+  inspect(err is @types.RequestError::Other(_), content="true")
+}

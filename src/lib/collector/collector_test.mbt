@@ -501,3 +501,18 @@ test "ttfb with zero requests" {
   inspect(stats.ttfb.p50_us, content="0")
   inspect(stats.ttfb.max_us, content="0")
 }
+
+///|
+test "599 counted as server error" {
+  let c = @collector.Collector::new()
+  c.record({
+    status_code: 599,
+    latency_us: 1000L,
+    ttfb_us: 0L,
+    error: None,
+    scheduled_time_us: 0L,
+    response_size_bytes: 0L,
+  })
+  let stats = c.finalize(1000.0)
+  inspect(stats.failed, content="1")
+}

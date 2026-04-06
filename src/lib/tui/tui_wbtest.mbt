@@ -154,3 +154,8 @@ test "render_tui with zero state" {
   inspect(output.contains("molt"), content="true")
   inspect(output.contains("10"), content="true")
 }
+
+///|
+test "format_elapsed_display over 1 hour" {
+  inspect(format_elapsed_display(3661000.0), content="3661.0s")
+}

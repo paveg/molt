@@ -164,3 +164,12 @@ test "both thresholds violated reports both" {
   inspect(result.passed, content="false")
   inspect(result.violations.length(), content="2")
 }
+
+///|
+test "zero errors with non-zero requests passes 0% threshold" {
+  // 0 failures out of 100 requests = 0% error rate, threshold 0.0% should pass
+  let stats = make_stats(0L, 100, 0)
+  let config = make_config(error_threshold_pct=Some(0.0))
+  let result = @threshold.check(stats, config)
+  inspect(result.passed, content="true")
+}
