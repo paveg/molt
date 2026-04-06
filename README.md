@@ -1,5 +1,10 @@
 # molt
 
+[![CI](https://github.com/paveg/molt/actions/workflows/ci.yml/badge.svg)](https://github.com/paveg/molt/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/paveg/molt/graph/badge.svg)](https://codecov.io/gh/paveg/molt)
+[![License](https://img.shields.io/github/license/paveg/molt)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/paveg/molt)](https://github.com/paveg/molt/releases)
+
 **Simple HTTP load testing CLI built with MoonBit.**
 
 ![demo](demo.gif)
