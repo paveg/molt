@@ -134,26 +134,7 @@ fn Histogram::value_from_index(
 }
 
 ///|
-pub fn Histogram::record(self : Histogram, value : Int64) -> Unit {
-  let v = if value < 0L { 0L } else { value }
-  let bucket = self.get_bucket_index(v)
-  let sub = self.get_sub_bucket_index(v, bucket)
-  let idx = self.counts_index(bucket, sub)
-  if idx < 0 || idx >= self.counts_len {
-    self.dropped_count = self.dropped_count + 1L
-    self.total_count = self.total_count + 1L
-    if v < self.min_value {
-      self.min_value = v
-    }
-    if v > self.max_value {
-      self.max_value = v
-    }
-    let fv = v.to_double()
-    self.sum = self.sum + fv
-    self.sum_of_squares = self.sum_of_squares + fv * fv
-    return
-  }
-  self.counts[idx] = self.counts[idx] + 1L
+fn Histogram::update_stats(self : Histogram, v : Int64) -> Unit {
   self.total_count = self.total_count + 1L
   if v < self.min_value {
     self.min_value = v
@@ -167,37 +148,39 @@ pub fn Histogram::record(self : Histogram, value : Int64) -> Unit {
 }
 
 ///|
+pub fn Histogram::record(self : Histogram, value : Int64) -> Unit {
+  let v = if value < 0L { 0L } else { value }
+  let bucket = self.get_bucket_index(v)
+  let sub = self.get_sub_bucket_index(v, bucket)
+  let idx = self.counts_index(bucket, sub)
+  if idx < 0 || idx >= self.counts_len {
+    self.dropped_count = self.dropped_count + 1L
+    self.update_stats(v)
+    return
+  }
+  self.counts[idx] = self.counts[idx] + 1L
+  self.update_stats(v)
+}
+
+///|
 pub fn Histogram::percentile(self : Histogram, p : Double) -> Int64 {
   guard self.total_count > 0L else { return 0L }
   let target_count = (p / 100.0 * self.total_count.to_double() + 0.5).to_int64()
   let mut accumulated : Int64 = 0L
-  let mut result : Int64 = 0L
-  let mut found = false
   for bucket in 0..<(self.bucket_count + 1) {
-    if found {
-      break
-    }
     let sub_start = if bucket == 0 { 0 } else { self.sub_bucket_half_count }
     for sub in sub_start..<self.sub_bucket_count {
       let idx = self.counts_index(bucket, sub)
       if idx >= self.counts_len {
-        found = true
-        result = self.max_value
-        break
+        return self.max_value
       }
       accumulated = accumulated + self.counts[idx]
       if accumulated >= target_count {
-        found = true
-        result = self.value_from_index(bucket, sub)
-        break
+        return self.value_from_index(bucket, sub)
       }
     }
   }
-  if found {
-    result
-  } else {
-    self.max_value
-  }
+  self.max_value
 }
 
 ///|

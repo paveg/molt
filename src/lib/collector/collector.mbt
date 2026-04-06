@@ -107,10 +107,9 @@ pub fn Collector::finalize(
   }
   let latency = latency_stats_from_histogram(self.histogram)
   let ttfb = latency_stats_from_histogram(self.ttfb_histogram)
-  let custom_percentiles : Array[(Double, Int64)] = []
-  for p in percentiles {
-    custom_percentiles.push((p, self.histogram.percentile(p)))
-  }
+  let custom_percentiles = percentiles.map(fn(p) {
+    (p, self.histogram.percentile(p))
+  })
   let bytes_per_sec = if total_time_ms > 0.0 {
     self.total_bytes.to_double() / (total_time_ms / 1000.0)
   } else {

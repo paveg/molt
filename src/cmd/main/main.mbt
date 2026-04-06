@@ -140,26 +140,19 @@ fn get_option_value(
   key : String,
   default : String,
 ) -> String {
-  match matches.values.get(key) {
-    Some(vals) => if vals.length() > 0 { vals[0] } else { default }
-    None => default
-  }
+  get_option_value_opt(matches, key).unwrap_or(default)
 }
 
 ///|
 fn get_option_value_opt(matches : @argparse.Matches, key : String) -> String? {
-  match matches.values.get(key) {
-    Some(vals) => if vals.length() > 0 { Some(vals[0]) } else { None }
-    None => None
-  }
+  matches.values
+  .get(key)
+  .bind(fn(vals) { if vals.length() > 0 { Some(vals[0]) } else { None } })
 }
 
 ///|
 fn get_flag(matches : @argparse.Matches, key : String) -> Bool {
-  match matches.flags.get(key) {
-    Some(v) => v
-    None => false
-  }
+  matches.flags.get(key).unwrap_or(false)
 }
 
 ///|
@@ -347,10 +340,7 @@ fn parse_args() -> @types.Config raise {
     "OPTIONS" => @types.HttpMethod::Options
     _ => @types.HttpMethod::Get
   }
-  let header_vals = match matches.values.get("header") {
-    Some(vals) => vals
-    None => []
-  }
+  let header_vals = matches.values.get("header").unwrap_or([])
   let headers : Array[(String, String)] = []
   for h in header_vals {
     match @types.parse_header(h) {

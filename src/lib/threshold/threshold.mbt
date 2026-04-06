@@ -21,5 +21,5 @@ pub fn check(stats : @types.Stats, config : @types.Config) -> ThresholdResult {
       violations.push("error rate \{error_pct}% exceeds threshold \{max_pct}%")
     }
   }
-  { passed: violations.length() == 0, violations }
+  { passed: violations.is_empty(), violations }
 }

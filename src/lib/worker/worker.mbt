@@ -265,8 +265,10 @@ pub async fn run(
         let raw_elapsed = @bench.monotonic_clock_end(start).to_int64()
         let error_type = classify_error(err.to_string())
         on_result(make_error_result(raw_elapsed, error_type, scheduled_us))
-        // Reconnect: the client may be in a broken state after an error
+        // Reconnect: the client may be in a broken state after an error.
+        // Sleep briefly to avoid tight reconnect loops on persistent failures.
         client.close()
+        @async.sleep(100)
         client = @http.Client::new(base_url) catch {
           reconnect_err => {
             on_result(
