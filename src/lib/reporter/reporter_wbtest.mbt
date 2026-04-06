@@ -265,7 +265,7 @@ test "format_csv_row with comma in error produces valid CSV" {
   // so CSV parsers treat it as a single field.
   // Expected: 100,0,"Other(error,with,commas)",0
   inspect(
-    row.contains("\"") && row.starts_with("100,0,\"") && row.ends_with(",0"),
+    row.contains("\"") && row.has_prefix("100,0,\"") && row.has_suffix(",0"),
     content="true",
   )
 }
