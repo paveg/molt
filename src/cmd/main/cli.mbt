@@ -1,0 +1,351 @@
+///|
+fn parse_comma_separated(s : String) -> Array[String] {
+  let result : Array[String] = []
+  let buf = StringBuilder::new()
+  for c in s {
+    if c == ',' {
+      let part = buf.to_string()
+      if part.length() > 0 {
+        result.push(part)
+      }
+      buf.reset()
+    } else if c != ' ' {
+      buf.write_char(c)
+    }
+  }
+  let last = buf.to_string()
+  if last.length() > 0 {
+    result.push(last)
+  }
+  result
+}
+
+///|
+fn get_option_value(
+  matches : @argparse.Matches,
+  key : String,
+  default : String,
+) -> String {
+  get_option_value_opt(matches, key).unwrap_or(default)
+}
+
+///|
+fn get_option_value_opt(matches : @argparse.Matches, key : String) -> String? {
+  matches.values
+  .get(key)
+  .bind(fn(vals) { if vals.length() > 0 { Some(vals[0]) } else { None } })
+}
+
+///|
+fn get_flag(matches : @argparse.Matches, key : String) -> Bool {
+  matches.flags.get(key).unwrap_or(false)
+}
+
+///|
+fn parse_args() -> @types.Config raise {
+  let cmd = @argparse.Command(
+    "molt",
+    about="MoonBit HTTP Load Tester",
+    version="0.1.0",
+    options=[
+      @argparse.OptionArg(
+        "connections",
+        short='c',
+        long="connections",
+        about="Number of concurrent connections",
+        default_values=["50"],
+      ),
+      @argparse.OptionArg(
+        "duration",
+        short='d',
+        long="duration",
+        about="Test duration (e.g. 10s, 1m)",
+      ),
+      @argparse.OptionArg(
+        "requests",
+        short='n',
+        long="requests",
+        about="Total number of requests",
+      ),
+      @argparse.OptionArg(
+        "method",
+        short='m',
+        long="method",
+        about="HTTP method (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS)",
+        default_values=["GET"],
+      ),
+      @argparse.OptionArg(
+        "header",
+        short='H',
+        long="header",
+        about="Custom header (e.g. 'Content-Type: application/json')",
+        action=@argparse.Append,
+      ),
+      @argparse.OptionArg(
+        "body",
+        short='b',
+        long="body",
+        about="Request body string",
+      ),
+      @argparse.OptionArg(
+        "body-file",
+        short='B',
+        long="body-file",
+        about="Request body from file path",
+      ),
+      @argparse.OptionArg(
+        "rate",
+        short='r',
+        long="rate",
+        about="Target requests per second",
+      ),
+      @argparse.OptionArg(
+        "timeout",
+        short='t',
+        long="timeout",
+        about="Per-request timeout (e.g. 5s, 30s)",
+        default_values=["30s"],
+      ),
+      @argparse.OptionArg(
+        "percentiles",
+        long="percentiles",
+        about="Custom percentiles to compute (comma-separated, e.g. 50,90,99,99.99)",
+      ),
+      @argparse.OptionArg(
+        "latency-threshold",
+        long="latency-threshold",
+        about="Fail if p99 > value (e.g. 100ms)",
+      ),
+      @argparse.OptionArg(
+        "error-threshold",
+        long="error-threshold",
+        about="Fail if error rate > percentage (e.g. 1.0)",
+      ),
+      @argparse.OptionArg(
+        "warm-up",
+        long="warm-up",
+        about="Warm-up duration excluded from stats (e.g. 3s)",
+      ),
+      @argparse.OptionArg(
+        "auth",
+        long="auth",
+        about="Basic auth credentials (user:password)",
+      ),
+      @argparse.OptionArg(
+        "serve",
+        long="serve",
+        about="Start built-in test HTTP server (e.g. 127.0.0.1:8080)",
+      ),
+    ],
+    flags=[
+      @argparse.FlagArg(
+        "no-tui",
+        long="no-tui",
+        about="Disable TUI, use plain output",
+      ),
+      @argparse.FlagArg(
+        "json",
+        short='j',
+        long="json",
+        about="Output results as JSON",
+      ),
+      @argparse.FlagArg(
+        "insecure",
+        short='k',
+        long="insecure",
+        about="Skip TLS certificate verification",
+      ),
+      @argparse.FlagArg(
+        "disable-keepalive",
+        long="disable-keepalive",
+        about="Disable HTTP keep-alive, create new connection per request",
+      ),
+      @argparse.FlagArg(
+        "debug",
+        long="debug",
+        about="Send a single request and print full details, then exit",
+      ),
+      @argparse.FlagArg(
+        "csv",
+        long="csv",
+        about="Output per-request results as CSV",
+      ),
+      @argparse.FlagArg(
+        "redirect",
+        short='L',
+        long="redirect",
+        about="Follow HTTP redirects (up to 10 hops)",
+      ),
+    ],
+    positionals=[@argparse.PositionArg("url", about="Target URL")],
+  )
+  let argv = @env.args()
+  // argv[0] is the program name; argparse expects only the arguments
+  let args = if argv.length() > 1 { argv[1:] } else { [][:] }
+  let matches = cmd.parse(argv=args)
+  let serve_addr = get_option_value_opt(matches, "serve")
+  let url = match get_option_value_opt(matches, "url") {
+    Some(u) => u
+    None =>
+      if serve_addr is Some(_) {
+        ""
+      } else {
+        raise Failure::Failure("URL is required")
+      }
+  }
+  let conn_str = get_option_value(matches, "connections", "50")
+  let connections = @string.parse_int(conn_str) catch { _ => 50 }
+  if connections <= 0 {
+    raise Failure::Failure("--connections must be a positive integer")
+  }
+  let duration_val = get_option_value_opt(matches, "duration")
+  let requests_val = get_option_value_opt(matches, "requests")
+  let mode : @types.TestMode = match (duration_val, requests_val) {
+    (Some(_), Some(_)) =>
+      raise Failure::Failure("Cannot specify both --duration and --requests")
+    (Some(d), None) => {
+      let ms = @duration.parse(d) catch { _ => 10000 }
+      @types.TestMode::Duration(ms)
+    }
+    (None, Some(r)) => {
+      let n = @duration.parse_count(r) catch {
+        _ => raise Failure::Failure("Invalid request count")
+      }
+      @types.TestMode::RequestCount(n)
+    }
+    (None, None) => @types.TestMode::Duration(10000)
+  }
+  let method_str = get_option_value(matches, "method", "GET")
+  let http_method = match method_str.to_upper() {
+    "GET" => @types.HttpMethod::Get
+    "POST" => @types.HttpMethod::Post
+    "PUT" => @types.HttpMethod::Put
+    "DELETE" => @types.HttpMethod::Delete
+    "PATCH" => @types.HttpMethod::Patch
+    "HEAD" => @types.HttpMethod::Head
+    "OPTIONS" => @types.HttpMethod::Options
+    _ => @types.HttpMethod::Get
+  }
+  let header_vals = matches.values.get("header").unwrap_or([])
+  let headers : Array[(String, String)] = []
+  for h in header_vals {
+    match @types.parse_header(h) {
+      Some(pair) => headers.push(pair)
+      None => ()
+    }
+  }
+  let body_val = get_option_value_opt(matches, "body")
+  let body_file_val = get_option_value_opt(matches, "body-file")
+  let body : String? = match (body_val, body_file_val) {
+    (Some(_), Some(_)) =>
+      raise Failure::Failure("Cannot specify both --body and --body-file")
+    (Some(b), None) => Some(b)
+    (None, Some(path)) => {
+      let content = @fs.read_file_to_string(path) catch {
+        _ => raise Failure::Failure("Failed to read body file: \{path}")
+      }
+      Some(content)
+    }
+    (None, None) => None
+  }
+  let rate : Int? = match get_option_value_opt(matches, "rate") {
+    Some(s) => {
+      let r = @string.parse_int(s) catch {
+        _ => raise Failure::Failure("Invalid rate value")
+      }
+      if r <= 0 {
+        raise Failure::Failure("--rate must be a positive integer")
+      }
+      Some(r)
+    }
+    None => None
+  }
+  let timeout_str = get_option_value(matches, "timeout", "30s")
+  let timeout_ms = @duration.parse(timeout_str) catch { _ => 30000 }
+  let no_tui = get_flag(matches, "no-tui")
+  let json_output = get_flag(matches, "json")
+  let percentiles_val = get_option_value_opt(matches, "percentiles")
+  let percentiles : Array[Double] = match percentiles_val {
+    Some(s) => {
+      let parts = parse_comma_separated(s)
+      let result : Array[Double] = []
+      for p in parts {
+        let v = @string.parse_double(p) catch {
+          _ => raise Failure::Failure("Invalid percentile value: \{p}")
+        }
+        if v < 0.0 || v > 100.0 {
+          raise Failure::Failure("Percentile must be between 0 and 100: \{p}")
+        }
+        result.push(v)
+      }
+      result
+    }
+    None => [50.0, 75.0, 90.0, 95.0, 99.0, 99.9]
+  }
+  let latency_threshold_us : Int64? = match
+    get_option_value_opt(matches, "latency-threshold") {
+    Some(s) => {
+      let ms = @duration.parse(s) catch {
+        _ => raise Failure::Failure("Invalid latency threshold")
+      }
+      Some((ms * 1000).to_int64())
+    }
+    None => None
+  }
+  let error_threshold_pct : Double? = match
+    get_option_value_opt(matches, "error-threshold") {
+    Some(s) =>
+      Some(
+        @string.parse_double(s) catch {
+          _ => raise Failure::Failure("Invalid error threshold")
+        },
+      )
+    None => None
+  }
+  let warm_up_ms = match get_option_value_opt(matches, "warm-up") {
+    Some(s) => @duration.parse(s) catch { _ => 0 }
+    None => 0
+  }
+  match get_option_value_opt(matches, "auth") {
+    Some(creds) => {
+      if !creds.contains(":") {
+        raise Failure::Failure("--auth must be in user:password format")
+      }
+      let encoded = @types.base64_encode(creds)
+      headers.push(("Authorization", "Basic \{encoded}"))
+    }
+    None => ()
+  }
+  let insecure = get_flag(matches, "insecure")
+  let disable_keepalive = get_flag(matches, "disable-keepalive")
+  let debug = get_flag(matches, "debug")
+  let csv_output = get_flag(matches, "csv")
+  let redirect = get_flag(matches, "redirect")
+  let max_redirects = if redirect { 10 } else { 0 }
+  if csv_output && json_output {
+    raise Failure::Failure("Cannot specify both --csv and --json")
+  }
+  {
+    url,
+    connections,
+    mode,
+    http_method,
+    headers,
+    body,
+    timeout_ms,
+    enable_tui: !no_tui && !json_output && !csv_output && !debug,
+    json_output,
+    latency_correction: true,
+    rate,
+    percentiles,
+    latency_threshold_us,
+    error_threshold_pct,
+    warm_up_ms,
+    insecure,
+    disable_keepalive,
+    debug,
+    csv_output,
+    max_redirects,
+    serve_addr,
+  }
+}
