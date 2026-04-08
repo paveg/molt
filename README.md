@@ -10,7 +10,8 @@
 
 ![demo](demo.gif)
 
-A lightweight, fast HTTP load testing tool inspired by [oha](https://github.com/hatoo/oha) and [hey](https://github.com/rakyll/hey). Built entirely in MoonBit using the native backend for direct I/O without WASM overhead.
+A lightweight, fast HTTP load testing tool inspired by [oha](https://github.com/hatoo/oha) and [hey](https://github.com/rakyll/hey).  
+Built entirely in MoonBit using the native backend for direct I/O without WASM overhead.
 
 ## Features
 
