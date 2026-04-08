@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/paveg/molt/compare/molt-v0.1.6...molt-v0.1.7) (2026-04-08)
+
+
+### Features
+
+* add Vercel Skills support and coordinator integration tests ([#9](https://github.com/paveg/molt/issues/9)) ([224aa97](https://github.com/paveg/molt/commit/224aa97bb8d531a46112c5faa829471a0dbe2b64))
+
 ## [0.1.6](https://github.com/paveg/molt/compare/molt-v0.1.5...molt-v0.1.6) (2026-04-06)
 
 
