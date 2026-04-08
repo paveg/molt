@@ -1,0 +1,111 @@
+name: Skills
+
+on:
+  push:
+    branches: [main]
+    paths: ['skills/**']
+  pull_request:
+    branches: [main]
+    paths: ['skills/**']
+
+jobs:
+  validate:
+    name: Validate SKILL.md
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate frontmatter
+        run: |
+          status=0
+          for skill_file in skills/*/SKILL.md; do
+            [ -f "$skill_file" ] || continue
+            dir=$(dirname "$skill_file")
+            name=$(basename "$dir")
+            echo "::group::Validating $name"
+
+            # Check frontmatter delimiters exist
+            if ! head -1 "$skill_file" | grep -q '^---$'; then
+              echo "::error file=$skill_file::Missing frontmatter opening delimiter (---)"
+              status=1
+            fi
+
+            # Extract frontmatter (between first two ---)
+            frontmatter=$(sed -n '2,/^---$/p' "$skill_file" | sed '$d')
+
+            # Required fields
+            for field in name description; do
+              if ! echo "$frontmatter" | grep -q "^${field}:"; then
+                echo "::error file=$skill_file::Missing required field: $field"
+                status=1
+              fi
+            done
+
+            # Check name matches directory
+            fm_name=$(echo "$frontmatter" | grep '^name:' | sed 's/^name:[[:space:]]*//')
+            if [ -n "$fm_name" ] && [ "$fm_name" != "$name" ]; then
+              echo "::warning file=$skill_file::Skill name '$fm_name' differs from directory '$name'"
+            fi
+
+            # Check content exists after frontmatter
+            body_lines=$(sed '1,/^---$/{ /^---$/!d; /^---$/d; }' "$skill_file" | sed '1,/^---$/d' | grep -c '[^[:space:]]' || true)
+            if [ "$body_lines" -eq 0 ]; then
+              echo "::error file=$skill_file::SKILL.md has no content after frontmatter"
+              status=1
+            fi
+
+            echo "::endgroup::"
+          done
+          exit $status
+
+  tag:
+    name: Tag skill versions
+    runs-on: ubuntu-latest
+    needs: [validate]
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag changed skills
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get files changed in the push commit
+          changed=$(git diff-tree --no-commit-id --name-only -r HEAD | grep '^skills/' || true)
+          [ -z "$changed" ] && exit 0
+
+          # Collect unique skill directories that changed
+          skill_dirs=$(echo "$changed" | sed 's|skills/\([^/]*\)/.*|skills/\1|' | sort -u)
+
+          for dir in $skill_dirs; do
+            skill_file="${dir}/SKILL.md"
+            [ -f "$skill_file" ] || continue
+
+            name=$(basename "$dir")
+
+            # Extract version from metadata.json or SKILL.md frontmatter
+            version=""
+            if [ -f "${dir}/metadata.json" ]; then
+              version=$(grep '"version"' "${dir}/metadata.json" | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+            fi
+            if [ -z "$version" ]; then
+              version=$(sed -n '2,/^---$/p' "$skill_file" | grep 'version:' | sed "s/.*version:[[:space:]]*['\"]\\{0,1\\}\([^'\"]*\\)['\"]\\{0,1\\}/\\1/" | head -1)
+            fi
+            [ -z "$version" ] && continue
+
+            tag="skills/${name}/v${version}"
+
+            # Skip if tag already exists
+            if git rev-parse "$tag" >/dev/null 2>&1; then
+              echo "Tag $tag already exists, skipping"
+              continue
+            fi
+
+            echo "Creating tag: $tag"
+            git tag "$tag"
+            git push origin "$tag"
+          done

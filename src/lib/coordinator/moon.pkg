@@ -8,8 +8,16 @@ import {
   "moonbitlang/core/bench",
 }
 
+import {
+  "moonbitlang/async/http",
+  "moonbitlang/async/socket",
+} for "test"
+
 supported_targets = "native"
 
 options(
-  targets: { "coordinator.mbt": [ "native" ] },
+  targets: {
+    "coordinator.mbt": [ "native" ],
+    "coordinator_test.mbt": [ "native" ],
+  },
 )
