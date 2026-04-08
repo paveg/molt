@@ -1,0 +1,9 @@
+{
+  "version": "0.1.0",
+  "organization": "paveg",
+  "date": "April 2026",
+  "abstract": "Run HTTP load tests using molt, a MoonBit-native load testing CLI. Construct commands, execute tests, and analyze latency/throughput/error results.",
+  "references": [
+    "https://github.com/paveg/molt"
+  ]
+}

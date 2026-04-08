@@ -4,12 +4,14 @@
 [![codecov](https://codecov.io/gh/paveg/molt/graph/badge.svg)](https://codecov.io/gh/paveg/molt)
 [![License](https://img.shields.io/github/license/paveg/molt)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/paveg/molt)](https://github.com/paveg/molt/releases)
+[![Devin Wiki](https://img.shields.io/badge/Devin-Wiki-blue)](https://app.devin.ai/org/ryota-ikezawa/wiki/paveg/molt?branch=main)
 
 **Simple HTTP load testing CLI built with MoonBit.**
 
 ![demo](demo.gif)
 
-A lightweight, fast HTTP load testing tool inspired by [oha](https://github.com/hatoo/oha) and [hey](https://github.com/rakyll/hey). Built entirely in MoonBit using the native backend for direct I/O without WASM overhead.
+A lightweight, fast HTTP load testing tool inspired by [oha](https://github.com/hatoo/oha) and [hey](https://github.com/rakyll/hey).  
+Built entirely in MoonBit using the native backend for direct I/O without WASM overhead.
 
 ## Features
 
@@ -83,6 +85,22 @@ molt -c 10 -d 5s http://127.0.0.1:8080/
 # Or test against your own server
 molt -c 50 -d 30s http://localhost:3000/api/health
 ```
+
+## AI Agent Integration
+
+molt is available as a [Vercel Skill](https://skills.sh/) — AI coding agents (Claude Code, Copilot, Cursor, etc.) can learn to use molt for load testing.
+
+```sh
+# Install the molt skill for your agent
+npx skills add paveg/molt
+```
+
+Once installed, you can ask your AI agent things like:
+- "Load test this API endpoint at 100 RPS for 30 seconds"
+- "Run a quick smoke test on localhost:3000"
+- "Benchmark the /api/users endpoint with POST requests"
+
+The agent will construct and run molt commands, then analyze the results.
 
 ## Usage Examples
 
