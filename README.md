@@ -73,6 +73,19 @@ moon build --target native --release
 cp _build/native/release/build/src/cmd/main/main.exe /usr/local/bin/molt
 ```
 
+## Quick Start
+
+```sh
+# Start the built-in test server
+molt --serve 127.0.0.1:8080 &
+
+# Run a load test against it
+molt -c 10 -d 5s http://127.0.0.1:8080/
+
+# Or test against your own server
+molt -c 50 -d 30s http://localhost:3000/api/health
+```
+
 ## AI Agent Integration
 
 molt is available as a [Vercel Skill](https://skills.sh/) — AI coding agents (Claude Code, Copilot, Cursor, etc.) can learn to use molt for load testing.
@@ -88,19 +101,6 @@ Once installed, you can ask your AI agent things like:
 - "Benchmark the /api/users endpoint with POST requests"
 
 The agent will construct and run molt commands, then analyze the results.
-
-## Quick Start
-
-```sh
-# Start the built-in test server
-molt --serve 127.0.0.1:8080 &
-
-# Run a load test against it
-molt -c 10 -d 5s http://127.0.0.1:8080/
-
-# Or test against your own server
-molt -c 50 -d 30s http://localhost:3000/api/health
-```
 
 ## Usage Examples
 
