@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/gh/paveg/molt/graph/badge.svg)](https://codecov.io/gh/paveg/molt)
 [![License](https://img.shields.io/github/license/paveg/molt)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/paveg/molt)](https://github.com/paveg/molt/releases)
+[![Devin Wiki](https://img.shields.io/badge/Devin-Wiki-blue)](https://app.devin.ai/org/ryota-ikezawa/wiki/paveg/molt?branch=main)
 
 **Simple HTTP load testing CLI built with MoonBit.**
 
