@@ -295,6 +295,22 @@ moon check --target native            # type check
 | Scenarios | No | No | No | Yes (JS) |
 | Binary | ~2.3 MB | ~3 MB | ~5 MB | ~40 MB |
 
+## AI Agent Integration
+
+molt is available as a [Vercel Skill](https://skills.sh/) — AI coding agents (Claude Code, Copilot, Cursor, etc.) can learn to use molt for load testing.
+
+```sh
+# Install the molt skill for your agent
+npx skills add paveg/molt
+```
+
+Once installed, you can ask your AI agent things like:
+- "Load test this API endpoint at 100 RPS for 30 seconds"
+- "Run a quick smoke test on localhost:3000"
+- "Benchmark the /api/users endpoint with POST requests"
+
+The agent will construct and run molt commands, then analyze the results.
+
 ## Roadmap
 
 - [ ] `--http2` HTTP/2 support ([upstream PR](https://github.com/moonbitlang/async/pull/305) in progress)
