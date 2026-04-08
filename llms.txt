@@ -1,0 +1,132 @@
+# molt
+
+> Simple HTTP load testing CLI built with MoonBit native backend.
+
+molt sends concurrent HTTP requests to a target URL and reports latency distribution, throughput, error rates, and TTFB using HDR Histogram.
+
+## Installation
+
+Build from source (requires MoonBit toolchain):
+
+```
+git clone https://github.com/paveg/molt.git && cd molt
+moon build --target native --release
+```
+
+Binary: `_build/native/release/build/src/cmd/main/main.exe`
+
+Or run directly: `moon run src/cmd/main --target native -- [options] <url>`
+
+## Usage
+
+```
+molt [options] <url>
+```
+
+Always use `--no-tui --json` for programmatic usage. TUI mode requires an interactive terminal.
+
+## Options
+
+### Load Control
+- `-c, --connections <N>` — Concurrent connections (default: 50)
+- `-d, --duration <dur>` — Test duration (e.g. 10s, 1m, 1m30s)
+- `-n, --requests <N>` — Total request count
+- `-r, --rate <N>` — Target requests per second
+- `--warm-up <dur>` — Warm-up period excluded from stats
+- `-t, --timeout <dur>` — Per-request timeout (default: 30s)
+
+### HTTP
+- `-m, --method <M>` — HTTP method: GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS (default: GET)
+- `-H, --header <H>` — Custom header (repeatable)
+- `-b, --body <str>` — Request body string
+- `-B, --body-file <path>` — Request body from file
+- `--auth <user:pass>` — Basic auth credentials
+- `-L, --redirect` — Follow redirects (up to 10 hops)
+- `--disable-keepalive` — New connection per request
+
+### Output
+- `--no-tui` — Plain text with periodic status
+- `--json` — Structured JSON output
+- `--csv` — Streaming per-request CSV
+- `--debug` — Single request with full response dump
+- `--percentiles <list>` — Custom percentiles (e.g. 50,90,99,99.99)
+
+### CI/CD Thresholds
+- `--latency-threshold <dur>` — Fail (exit 3) if p99 exceeds value (e.g. 100ms)
+- `--error-threshold <pct>` — Fail (exit 3) if error rate exceeds percentage (e.g. 1.0)
+
+### Other
+- `--serve <addr>` — Start built-in test HTTP server (e.g. 127.0.0.1:8080)
+
+## Examples
+
+Quick smoke test:
+```
+molt --no-tui --json -c 10 -n 100 https://api.example.com/health
+```
+
+Sustained load for 30 seconds:
+```
+molt --no-tui --json -c 50 -d 30s https://api.example.com/endpoint
+```
+
+Rate-limited test (100 RPS):
+```
+molt --no-tui --json -c 20 -d 30s -r 100 https://api.example.com/endpoint
+```
+
+POST with JSON body:
+```
+molt --no-tui --json -m POST -H 'Content-Type: application/json' -b '{"key":"value"}' -c 10 -d 10s https://api.example.com/endpoint
+```
+
+CI gate with SLA thresholds:
+```
+molt --no-tui --json -c 50 -d 30s --latency-threshold 200ms --error-threshold 1.0 https://api.example.com/endpoint
+```
+
+Local testing with built-in server:
+```
+molt --serve 127.0.0.1:8080 &
+molt --no-tui --json -c 10 -n 100 http://127.0.0.1:8080
+```
+
+## JSON Output Schema
+
+```json
+{
+  "config": { "url", "connections", "duration_sec", "rate_rps", "timeout_ms", "method" },
+  "summary": { "total_requests", "successful", "failed", "total_time_sec", "requests_per_sec" },
+  "latency": { "p50_ms", "p75_ms", "p90_ms", "p95_ms", "p99_ms", "p99_9_ms", "max_ms", "min_ms", "mean_ms", "stdev_ms" },
+  "ttfb": { "p50_ms", "p99_ms", "max_ms", "mean_ms", "stdev_ms" },
+  "status_codes": { "<code>": "<count>" },
+  "errors": { "<message>": "<count>" },
+  "throughput": { "total_bytes", "bytes_per_sec" }
+}
+```
+
+## Result Analysis
+
+Key metrics to check:
+- **Throughput**: summary.requests_per_sec
+- **Tail latency**: compare latency.p50_ms vs latency.p99_ms — large gaps indicate tail latency issues
+- **Error rate**: summary.failed / summary.total_requests
+- **Status codes**: look for unexpected 4xx/5xx in status_codes
+- **TTFB**: ttfb.p99_ms — high values suggest server processing bottlenecks
+
+Red flags:
+- p99 > 5x p50 (tail latency problem)
+- Error rate > 1%
+- stdev > mean (highly variable latency)
+
+## Exit Codes
+
+- 0: Success
+- 1: Configuration error
+- 2: Test failures
+- 3: Threshold violation
+
+## Links
+
+- Source: https://github.com/paveg/molt
+- Issues: https://github.com/paveg/molt/issues
