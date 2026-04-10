@@ -1,6 +1,6 @@
 {
   "name": "paveg/molt",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "deps": {
     "moonbitlang/async": "0.17.1",
     "mizchi/tui": "0.9.1",

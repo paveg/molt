@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/paveg/molt/compare/molt-v0.1.7...molt-v0.1.8) (2026-04-10)
+
+
+### Features
+
+* wire --insecure flag to HTTPS cert verification ([#12](https://github.com/paveg/molt/issues/12)) ([69d81cb](https://github.com/paveg/molt/commit/69d81cbcd4fe05790dbe44446833a7fcb0ec4013))
+
 ## [0.1.7](https://github.com/paveg/molt/compare/molt-v0.1.6...molt-v0.1.7) (2026-04-08)
 
 
