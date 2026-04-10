@@ -3,7 +3,7 @@
 ## Syntax
 
 - String interpolation: `"\{variable}"` (not `\(variable)`)
-- Boolean negation: `not(x)` (not `!x`)
+- Boolean negation: `!expr` (`not(x)` is deprecated as of MoonBit 0.9.x)
 - Bitwise: `<<`, `>>`, `.land()`, `.lor()` (not `.lsl()`, `.asr()`)
 - Char literals: `'\u0000'` (not `'\x00'`)
 - String slicing: `s[start:end].to_string()` (not `s.substring()`)
