@@ -66,6 +66,7 @@ fn make_config(
     csv_output: false,
     max_redirects: 0,
     serve_addr: None,
+    compression: false,
   }
 }
 
