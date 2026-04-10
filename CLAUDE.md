@@ -6,15 +6,15 @@ Simple HTTP load testing CLI built with MoonBit native backend.
 
 ```sh
 moon build --target native          # build
-moon build --target native --release # release build (~2.3MB)
+moon build --target native --release # release build (~2.4MB)
 moon test                           # wasm-gc tests
-moon test --target native           # all tests including native-only (220+)
+moon test --target native           # all tests including native-only (250+)
 moon fmt                            # format
 moon check --target native          # type check
 ```
 
 `moon test` (no args) skips native-only packages (worker, coordinator, tui, rate_limiter).
-`moon test --target native` runs everything but shows 1 unavoidable WARN (cc-link-flags override).
+`moon test --target native` runs the full suite cleanly.
 
 ## Project Structure
 
@@ -49,6 +49,5 @@ Enforced by commitlint on PRs.
 
 ## Known Constraints
 
-- `mizchi/tui/io` C stubs don't propagate via cc-link-flags. `cmd/main/moon.pkg` manually links `.mooncakes/mizchi/tui/src/io/tui_native.c`.
 - `--insecure` flag exists but upstream `@http.Client` doesn't expose `verify~` to `Tls::client` yet (issue moonbitlang/async#329).
 - Rate limiter capped at ~1000 RPS due to ms-only `@async.sleep`. Absolute-deadline scheduling mitigates drift.
