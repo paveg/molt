@@ -28,10 +28,25 @@ pub fn parse_url(url : String) -> (String, String) {
 }
 
 ///|
-fn build_headers(pairs : Array[(String, String)]) -> Map[String, String] {
+/// Builds the per-request header map from user-supplied pairs.
+///
+/// When `compression` is false (the default), inject
+/// `Accept-Encoding: identity` so responses come back uncompressed and
+/// `response_size_bytes` reflects wire bytes — matching curl's default
+/// behavior and pre-0.1.8 semantics. If the user already set their own
+/// `Accept-Encoding` (exact or lowercase), their value is preserved.
+fn build_headers(
+  pairs : Array[(String, String)],
+  compression~ : Bool,
+) -> Map[String, String] {
   let m : Map[String, String] = {}
   for pair in pairs {
     m[pair.0] = pair.1
+  }
+  if !compression &&
+    !m.contains("Accept-Encoding") &&
+    !m.contains("accept-encoding") {
+    m["Accept-Encoding"] = "identity"
   }
   m
 }
@@ -94,10 +109,11 @@ async fn follow_redirects(
   response : @http.Response,
   max_redirects : Int,
   extra_headers : Array[(String, String)],
+  compression : Bool,
 ) -> @http.Response {
   let mut current = response
   let mut remaining = max_redirects
-  let headers = build_headers(extra_headers)
+  let headers = build_headers(extra_headers, compression~)
   while remaining > 0 && current.code >= 300 && current.code < 400 {
     match current.headers.get("location") {
       Some(loc) => {
@@ -144,7 +160,7 @@ pub async fn run(
       return
     }
   }
-  let headers = build_headers(config.headers)
+  let headers = build_headers(config.headers, compression=config.compression)
   let epoch_us = @bench.monotonic_clock_end(@bench.monotonic_clock_start()).to_int64()
   let use_co = config.latency_correction && rate_limiter is Some(_)
   let rate = config.rate.unwrap_or(1)
@@ -212,7 +228,12 @@ pub async fn run(
           let final_response = if config.max_redirects > 0 &&
             response.code >= 300 &&
             response.code < 400 {
-            follow_redirects(response, config.max_redirects, config.headers)
+            follow_redirects(
+              response,
+              config.max_redirects,
+              config.headers,
+              config.compression,
+            )
           } else {
             response
           }

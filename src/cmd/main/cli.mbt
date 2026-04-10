@@ -176,6 +176,11 @@ fn parse_args() -> @types.Config raise {
         long="redirect",
         about="Follow HTTP redirects (up to 10 hops)",
       ),
+      @argparse.FlagArg(
+        "compression",
+        long="compression",
+        about="Enable gzip/deflate compression (default: off, requests identity encoding)",
+      ),
     ],
     positionals=[@argparse.PositionArg("url", about="Target URL")],
   )
@@ -322,6 +327,7 @@ fn parse_args() -> @types.Config raise {
   let csv_output = get_flag(matches, "csv")
   let redirect = get_flag(matches, "redirect")
   let max_redirects = if redirect { 10 } else { 0 }
+  let compression = get_flag(matches, "compression")
   if csv_output && json_output {
     raise Failure::Failure("Cannot specify both --csv and --json")
   }
@@ -347,5 +353,6 @@ fn parse_args() -> @types.Config raise {
     csv_output,
     max_redirects,
     serve_addr,
+    compression,
   }
 }

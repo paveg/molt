@@ -22,6 +22,7 @@ fn test_config(url : String, duration_ms : Int) -> @types.Config {
     csv_output: false,
     max_redirects: 0,
     serve_addr: None,
+    compression: false,
   }
 }
 

@@ -30,7 +30,13 @@ async fn main {
     try {
       let (base_url, path) = @worker.parse_url(config.url)
       let client = @http.Client::new(base_url, verify=!config.insecure)
-      let response = client.get(path)
+      // Match worker semantics: when compression is off, force identity so
+      // the debug output reflects wire bytes rather than decompressed payload.
+      let debug_headers : Map[String, String] = {}
+      if !config.compression {
+        debug_headers["Accept-Encoding"] = "identity"
+      }
+      let response = client.get(path, extra_headers=debug_headers)
       println("Status: \{response.code} \{response.reason}")
       println("Headers:")
       for k, v in response.headers {
