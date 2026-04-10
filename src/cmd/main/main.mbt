@@ -28,12 +28,15 @@ async fn main {
   if config.debug {
     println("DEBUG: sending single request to \{config.url}\n")
     try {
-      let (response, data) = @http.get(config.url)
+      let (base_url, path) = @worker.parse_url(config.url)
+      let client = @http.Client::new(base_url, verify=!config.insecure)
+      let response = client.get(path)
       println("Status: \{response.code} \{response.reason}")
       println("Headers:")
       for k, v in response.headers {
         println("  \{k}: \{v}")
       }
+      let data = (client : &@async_io.Reader).read_all()
       let body_str = data.text() catch { _ => "<binary or decode error>" }
       let preview = if body_str.length() > 500 {
         body_str[:500].to_string() + "..."

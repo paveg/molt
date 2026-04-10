@@ -1,5 +1,5 @@
 ///|
-fn parse_url(url : String) -> (String, String) {
+pub fn parse_url(url : String) -> (String, String) {
   // Find "://" then first "/" after it to split base and path
   let mut scheme_end = 0
   let mut prev2 = '\u0000'
