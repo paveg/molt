@@ -1,6 +1,6 @@
 {
   "name": "paveg/molt",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "deps": {
     "moonbitlang/async": "0.17.1",
     "mizchi/tui": "0.9.1",
@@ -9,7 +9,11 @@
   "readme": "README.mbt.md",
   "repository": "https://github.com/paveg/molt",
   "license": "Apache-2.0",
-  "keywords": ["load-testing", "http", "benchmark"],
+  "keywords": [
+    "load-testing",
+    "http",
+    "benchmark"
+  ],
   "description": "Simple HTTP load testing CLI built with MoonBit"
 }
 

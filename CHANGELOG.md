@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/paveg/molt/compare/molt-v0.1.8...molt-v0.1.9) (2026-04-10)
+
+
+### Features
+
+* add --compression flag (default off) to control Accept-Encoding ([#17](https://github.com/paveg/molt/issues/17)) ([0eb84ee](https://github.com/paveg/molt/commit/0eb84ee5c7e67d983cb42fbda19ca2a234d91e81)), closes [#14](https://github.com/paveg/molt/issues/14)
+
 ## [0.1.8](https://github.com/paveg/molt/compare/molt-v0.1.7...molt-v0.1.8) (2026-04-10)
 
 
