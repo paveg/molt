@@ -3,7 +3,7 @@
   "version": "0.1.7",
   "deps": {
     "moonbitlang/async": "0.16.0",
-    "mizchi/tui": "0.8.0",
+    "mizchi/tui": "0.9.0",
     "moonbitlang/x": "0.4.40"
   },
   "readme": "README.mbt.md",
