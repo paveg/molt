@@ -49,5 +49,4 @@ Enforced by commitlint on PRs.
 
 ## Known Constraints
 
-- `--insecure` flag exists but upstream `@http.Client` doesn't expose `verify~` to `Tls::client` yet (issue moonbitlang/async#329).
 - Rate limiter capped at ~1000 RPS due to ms-only `@async.sleep`. Absolute-deadline scheduling mitigates drift.
