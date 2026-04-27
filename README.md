@@ -238,7 +238,7 @@ Usage: molt [options] <url>
 | `--timeout` | `-t` | `30s` | Per-request timeout |
 | `--redirect` | `-L` | off | Follow 3xx redirects (up to 10 hops) |
 | `--disable-keepalive` | | off | New connection per request |
-| `--insecure` | `-k` | off | Skip TLS verification ([pending upstream](https://github.com/moonbitlang/async/issues/329)) |
+| `--insecure` | `-k` | off | Skip TLS certificate verification |
 | **Output** | | | |
 | `--no-tui` | | off | Plain text with periodic status |
 | `--json` | `-j` | off | JSON output (implies `--no-tui`) |
@@ -316,7 +316,6 @@ moon check --target native            # type check
 ## Roadmap
 
 - [ ] `--http2` HTTP/2 support ([upstream PR](https://github.com/moonbitlang/async/pull/305) in progress)
-- [ ] `--insecure` actual TLS skip ([upstream issue](https://github.com/moonbitlang/async/issues/329))
 
 ## License
 
