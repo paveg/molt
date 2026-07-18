@@ -1,11 +1,11 @@
 ///|
 test "format_us_as_ms zero" {
-  inspect(format_us_as_ms(0L), content="0.0ms")
+  inspect(format_us_as_ms(0L), content="0.00ms")
 }
 
 ///|
 test "format_us_as_ms 1us rounds to 0 fractional" {
-  inspect(format_us_as_ms(1L), content="0.0ms")
+  inspect(format_us_as_ms(1L), content="0.00ms")
 }
 
 ///|
@@ -15,7 +15,7 @@ test "format_us_as_ms 999us" {
 
 ///|
 test "format_us_as_ms 1000us exact millisecond" {
-  inspect(format_us_as_ms(1000L), content="1.0ms")
+  inspect(format_us_as_ms(1000L), content="1.00ms")
 }
 
 ///|
@@ -30,7 +30,17 @@ test "format_us_as_ms 999999us" {
 
 ///|
 test "format_us_as_ms 1000000us" {
-  inspect(format_us_as_ms(1000000L), content="1000.0ms")
+  inspect(format_us_as_ms(1000000L), content="1000.00ms")
+}
+
+///|
+test "format_us_as_ms 80us single-digit fraction is zero-padded" {
+  inspect(format_us_as_ms(80L), content="0.08ms")
+}
+
+///|
+test "format_us_as_ms 100us boundary already two digits" {
+  inspect(format_us_as_ms(100L), content="0.10ms")
 }
 
 ///|
@@ -40,12 +50,12 @@ test "format_percentage zero total guard" {
 
 ///|
 test "format_percentage zero of hundred" {
-  inspect(format_percentage(0, 100), content="0.0%")
+  inspect(format_percentage(0, 100), content="0.00%")
 }
 
 ///|
 test "format_percentage hundred of hundred" {
-  inspect(format_percentage(100, 100), content="100.0%")
+  inspect(format_percentage(100, 100), content="100.00%")
 }
 
 ///|
@@ -55,12 +65,24 @@ test "format_percentage one third" {
 
 ///|
 test "format_percentage fifty percent" {
-  inspect(format_percentage(50, 100), content="50.0%")
+  inspect(format_percentage(50, 100), content="50.00%")
+}
+
+///|
+test "format_percentage single-digit fraction is zero-padded" {
+  // 661 / 2000 * 100 = 33.05%
+  inspect(format_percentage(661, 2000), content="33.05%")
+}
+
+///|
+test "format_percentage whole zero single-digit fraction is zero-padded" {
+  // 1 / 2000 * 100 = 0.05%
+  inspect(format_percentage(1, 2000), content="0.05%")
 }
 
 ///|
 test "format_rps zero" {
-  inspect(format_rps(0.0), content="0.0")
+  inspect(format_rps(0.0), content="0.00")
 }
 
 ///|
@@ -70,7 +92,7 @@ test "format_rps fractional" {
 
 ///|
 test "format_rps large whole number" {
-  inspect(format_rps(1000.0), content="1000.0")
+  inspect(format_rps(1000.0), content="1000.00")
 }
 
 ///|
@@ -79,8 +101,18 @@ test "format_rps two decimal places" {
 }
 
 ///|
+test "format_rps single-digit fraction is zero-padded" {
+  inspect(format_rps(8.05), content="8.05")
+}
+
+///|
+test "format_rps whole zero single-digit fraction is zero-padded" {
+  inspect(format_rps(0.05), content="0.05")
+}
+
+///|
 test "format_time zero" {
-  inspect(format_time(0.0), content="0.0s")
+  inspect(format_time(0.0), content="0.00s")
 }
 
 ///|
@@ -90,17 +122,29 @@ test "format_time 999ms" {
 
 ///|
 test "format_time 1000ms exact second" {
-  inspect(format_time(1000.0), content="1.0s")
+  inspect(format_time(1000.0), content="1.00s")
 }
 
 ///|
 test "format_time 60000ms" {
-  inspect(format_time(60000.0), content="60.0s")
+  inspect(format_time(60000.0), content="60.00s")
 }
 
 ///|
 test "format_time 100ms" {
   inspect(format_time(100.0), content="0.10s")
+}
+
+///|
+test "format_time single-digit fraction is zero-padded (61.05s regression)" {
+  // 61050ms = 61.05s; must not render as "61.5s"
+  inspect(format_time(61050.0), content="61.05s")
+}
+
+///|
+test "format_time whole zero single-digit fraction is zero-padded" {
+  // 50ms = 0.05s
+  inspect(format_time(50.0), content="0.05s")
 }
 
 ///|
