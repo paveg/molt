@@ -28,7 +28,7 @@ fn test_config(url : String, duration_ms : Int) -> @types.Config {
 
 ///|
 async fn start_server(group : @async.TaskGroup[Unit]) -> (@http.Server, Int) {
-  let server = @http.Server::new(@socket.Addr::parse("127.0.0.1:0"))
+  let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
   let port = server.addr.port()
   group.spawn_bg(no_wait=true, async fn() {
     server.run_forever(async fn(_request, body, conn) {

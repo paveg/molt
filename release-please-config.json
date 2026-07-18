@@ -7,9 +7,8 @@
       "bump-patch-for-minor-pre-major": true,
       "extra-files": [
         {
-          "type": "json",
-          "path": "moon.mod.json",
-          "jsonpath": "$.version"
+          "type": "generic",
+          "path": "moon.mod"
         }
       ]
     }

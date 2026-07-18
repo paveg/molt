@@ -3,6 +3,7 @@ import {
   "paveg/molt/src/lib/rate_limiter",
   "moonbitlang/async",
   "moonbitlang/async/http",
+  "moonbitlang/async/tls",
   "moonbitlang/core/bench",
   "moonbitlang/core/string",
 }

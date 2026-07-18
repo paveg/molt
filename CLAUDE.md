@@ -49,4 +49,4 @@ Enforced by commitlint on PRs.
 
 ## Known Constraints
 
-- Rate limiter capped at ~1000 RPS due to ms-only `@async.sleep`. Absolute-deadline scheduling mitigates drift.
+- `@async.sleep` is ms-only. The rate limiter emits tokens in per-ms batches against absolute deadlines, so rates above 1000 RPS work; sub-ms pacing between individual requests is not possible.

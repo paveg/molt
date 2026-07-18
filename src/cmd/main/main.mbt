@@ -12,7 +12,7 @@ async fn main {
     Some(addr) => {
       println("molt test server listening on \{addr}")
       println("Press Ctrl+C to stop\n")
-      let server = @http.Server::new(@socket.Addr::parse(addr))
+      let server = @http.Server(@socket.Addr::parse(addr))
       server.run_forever(async fn(_request, body, conn) {
         // Drain request body
         while body.read_some() is Some(_) {
@@ -29,7 +29,14 @@ async fn main {
     println("DEBUG: sending single request to \{config.url}\n")
     try {
       let (base_url, path) = @worker.parse_url(config.url)
-      let client = @http.Client::new(base_url, verify=!config.insecure)
+      let client = @http.Client(
+        base_url,
+        trust=if config.insecure {
+          @tls.NoVerification
+        } else {
+          @tls.SystemRoot
+        },
+      )
       // Match worker semantics: when compression is off, force identity so
       // the debug output reflects wire bytes rather than decompressed payload.
       let debug_headers : Map[String, String] = {}

@@ -153,8 +153,12 @@ pub async fn run(
   num_workers? : Int = 1,
 ) -> Unit {
   let (base_url, path) = parse_url(config.url)
-  let verify = !config.insecure
-  let mut client = @http.Client::new(base_url, verify~) catch {
+  let trust : @tls.TrustedRoot = if config.insecure {
+    @tls.NoVerification
+  } else {
+    @tls.SystemRoot
+  }
+  let mut client = @http.Client(base_url, trust~) catch {
     err => {
       on_result(make_error_result(0L, classify_error(err.to_string()), 0L))
       return
@@ -261,7 +265,7 @@ pub async fn run(
           })
           if config.disable_keepalive {
             client.close()
-            client = @http.Client::new(base_url, verify~) catch {
+            client = @http.Client(base_url, trust~) catch {
               err => {
                 on_result(
                   make_error_result(0L, classify_error(err.to_string()), 0L),
@@ -291,7 +295,7 @@ pub async fn run(
         // Sleep briefly to avoid tight reconnect loops on persistent failures.
         client.close()
         @async.sleep(100)
-        client = @http.Client::new(base_url, verify~) catch {
+        client = @http.Client(base_url, trust~) catch {
           reconnect_err => {
             on_result(
               make_error_result(
