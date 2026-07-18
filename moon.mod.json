@@ -3,8 +3,8 @@
   "version": "0.1.9",
   "deps": {
     "moonbitlang/async": "0.17.1",
-    "mizchi/tui": "0.9.1",
-    "moonbitlang/x": "0.4.40"
+    "mizchi/tui": "0.9.4",
+    "moonbitlang/x": "0.4.44"
   },
   "readme": "README.mbt.md",
   "repository": "https://github.com/paveg/molt",
@@ -16,4 +16,3 @@
   ],
   "description": "Simple HTTP load testing CLI built with MoonBit"
 }
-
