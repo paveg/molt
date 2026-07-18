@@ -70,6 +70,23 @@ test "rate accessor after negative clamp" {
 }
 
 ///|
+async test "rate above 1000 emits tokens faster than 1000 per second" {
+  // 400 tokens at rate=4000 should take ~100ms. A filler capped at one
+  // token per 1ms sleep tick needs >=400ms, so a 300ms bound separates
+  // the two behaviors with margin for scheduler jitter.
+  let rl = RateLimiter::new(4000)
+  let start = @async.now()
+  @async.with_task_group(async fn(group) {
+    rl.start(group)
+    for _ in 0..<400 {
+      rl.acquire()
+    }
+  })
+  let elapsed = @async.now() - start
+  inspect(elapsed < 300L, content="true")
+}
+
+///|
 async test "filler task does not block task group termination" {
   let completed = @async.with_timeout_opt(2000, async fn() {
     @async.with_task_group(async fn(group) {

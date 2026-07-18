@@ -13,6 +13,8 @@ pub fn RateLimiter::new(rate : Int) -> RateLimiter {
 ///|
 /// Start the token filler task. Must be called inside a TaskGroup.
 /// Uses absolute deadline scheduling (oha pattern) to prevent cumulative drift.
+/// Tokens due by the current instant are emitted as a batch, so rates above
+/// 1000 req/s work despite `@async.sleep` only having millisecond resolution.
 pub fn RateLimiter::start(
   self : RateLimiter,
   group : @async.TaskGroup[Unit],
@@ -20,19 +22,25 @@ pub fn RateLimiter::start(
   if self.rate <= 0 {
     return
   }
-  let interval_ms = if 1000 / self.rate < 1 { 1 } else { 1000 / self.rate }
-  let interval_ms_i64 = interval_ms.to_int64()
+  let rate = self.rate.to_int64()
   group.spawn_bg(no_wait=true, async fn() {
     let start = @async.now()
-    let mut token_index : Int64 = 0L
+    let mut emitted = 0L
     while true {
-      self.queue.put(())
-      token_index = token_index + 1L
-      let next_deadline = start + token_index * interval_ms_i64
-      let now = @async.now()
-      let wait = next_deadline - now
+      let elapsed = @async.now() - start
+      // +1 seeds the first token at t=0 instead of after one interval
+      let target = elapsed * rate / 1000L + 1L
+      while emitted < target {
+        self.queue.put(())
+        emitted = emitted + 1L
+      }
+      // Earliest instant at which the next token becomes due
+      let next_deadline = (emitted * 1000L + rate - 1L) / rate
+      let wait = start + next_deadline - @async.now()
       if wait > 0L {
         @async.sleep(wait.to_int())
+      } else {
+        @async.pause()
       }
     }
   })
