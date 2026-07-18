@@ -43,6 +43,9 @@ Always use `--no-tui --json` for programmatic usage. TUI mode requires an intera
 - `--auth <user:pass>` — Basic auth credentials
 - `-L, --redirect` — Follow redirects (up to 10 hops)
 - `--disable-keepalive` — New connection per request
+- `--compression` — Enable gzip/deflate compression (default: off, requests identity encoding)
+- `-k, --insecure` — Skip TLS certificate verification
+- `--cacert <path>` — Custom CA certificate (PEM) for TLS verification
 
 ### Output
 - `--no-tui` — Plain text with periodic status
@@ -125,6 +128,7 @@ Red flags:
 - 1: Configuration error
 - 2: Test failures
 - 3: Threshold violation
+- 130: Interrupted (SIGINT/Ctrl-C); statistics collected so far are still reported
 
 ## Links
 
