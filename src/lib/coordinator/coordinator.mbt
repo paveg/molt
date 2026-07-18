@@ -7,11 +7,21 @@ pub(all) struct TuiCallbacks {
 }
 
 ///|
+/// Result of a `run()` invocation. `interrupted` is `true` when the run was
+/// cut short by a cancellation (e.g. SIGINT) rather than reaching its
+/// configured end condition; `stats` still reflects everything collected up
+/// to that point.
+pub(all) struct RunOutcome {
+  stats : @types.Stats
+  interrupted : Bool
+}
+
+///|
 pub async fn run(
   config : @types.Config,
   tui_callbacks? : TuiCallbacks? = None,
   on_result? : ((@types.RequestResult) -> Unit)? = None,
-) -> @types.Stats {
+) -> RunOutcome {
   let collector = @collector.Collector::new()
   let time_series : Array[@types.TimeSeriesPoint] = []
   let mut stopped = false
@@ -28,6 +38,7 @@ pub async fn run(
   if tui_callbacks is Some(cb) {
     (cb.on_init)()
   }
+  let mut interrupted = false
   @async.with_task_group(async fn(group) {
     // Set up rate limiter if configured
     let limiter : @rate_limiter.RateLimiter? = match config.rate {
@@ -119,12 +130,19 @@ pub async fn run(
         }
     }
     stopped = true
-  })
+  }) catch {
+    err =>
+      if @async.is_cancellation_error(err) {
+        interrupted = true
+      } else {
+        raise err
+      }
+  }
   if tui_callbacks is Some(cb) {
     (cb.on_cleanup)()
   }
   let elapsed_ms = @bench.monotonic_clock_end(start_time) / 1000.0
   let stats = collector.finalize(elapsed_ms, percentiles=config.percentiles)
   // Attach time-series data
-  { ..stats, time_series, }
+  { stats: { ..stats, time_series, }, interrupted }
 }
