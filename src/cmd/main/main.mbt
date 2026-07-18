@@ -105,7 +105,8 @@ async fn main {
   } else {
     None
   }
-  let stats = @coordinator.run(config, tui_callbacks~, on_result=csv_callback)
+  let outcome = @coordinator.run(config, tui_callbacks~, on_result=csv_callback)
+  let stats = outcome.stats
   if config.json_output {
     println(@reporter.report_json(config, stats))
   } else {
@@ -116,8 +117,15 @@ async fn main {
     for v in threshold_result.violations {
       println("THRESHOLD VIOLATION: \{v}")
     }
+  }
+  // An interrupted run (e.g. SIGINT) takes precedence over threshold/failure
+  // exit codes: the caller asked us to stop, so 130 (128 + SIGINT) is the
+  // most accurate signal regardless of how the partial stats look.
+  if outcome.interrupted {
+    @sys.exit(130)
+  }
+  if !threshold_result.passed {
     @sys.exit(3)
-    panic()
   }
   if stats.failed > 0 {
     @sys.exit(2)

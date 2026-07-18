@@ -49,7 +49,7 @@ async fn start_server(group : @async.TaskGroup[Unit]) -> (@http.Server, Int) {
 async test "integration: basic duration mode" {
   @async.with_task_group(async fn(group) {
     let (server, port) = start_server(group)
-    let stats = @coordinator.run(test_config("http://127.0.0.1:\{port}", 300))
+    let stats = @coordinator.run(test_config("http://127.0.0.1:\{port}", 300)).stats
     server.close()
     inspect(stats.total_requests > 0, content="true")
     inspect(stats.failed, content="0")
@@ -65,7 +65,7 @@ async test "integration: request count mode" {
       ..test_config("http://127.0.0.1:\{port}", 0),
       mode: @types.TestMode::RequestCount(20),
     }
-    let stats = @coordinator.run(config)
+    let stats = @coordinator.run(config).stats
     server.close()
     inspect(stats.total_requests >= 20, content="true")
     inspect(stats.failed, content="0")
@@ -78,11 +78,26 @@ async test "integration: on_result callback" {
     let (server, port) = start_server(group)
     let mut count = 0
     let stats = @coordinator.run(
-      test_config("http://127.0.0.1:\{port}", 300),
-      on_result=Some(fn(_r) { count = count + 1 }),
-    )
+        test_config("http://127.0.0.1:\{port}", 300),
+        on_result=Some(fn(_r) { count = count + 1 }),
+      ).stats
     server.close()
     inspect(stats.total_requests > 0, content="true")
     inspect(count > 0, content="true")
+  })
+}
+
+///|
+async test "integration: cancellation mid-run yields partial stats instead of raising" {
+  @async.with_task_group(async fn(group) {
+    let (server, port) = start_server(group)
+    let config = test_config("http://127.0.0.1:\{port}", 30_000)
+    let task = group.spawn(async fn() { @coordinator.run(config) })
+    @async.sleep(200)
+    task.cancel()
+    let outcome = task.wait()
+    server.close()
+    inspect(outcome.interrupted, content="true")
+    inspect(outcome.stats.total_requests >= 0, content="true")
   })
 }
