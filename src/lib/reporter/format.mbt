@@ -2,7 +2,8 @@
 fn format_us_as_ms(us : Int64) -> String {
   let ms_whole = us / 1000L
   let ms_frac = us % 1000L / 10L
-  "\{ms_whole}.\{ms_frac}ms"
+  let frac_str = if ms_frac < 10L { "0\{ms_frac}" } else { "\{ms_frac}" }
+  "\{ms_whole}.\{frac_str}ms"
 }
 
 ///|
@@ -11,21 +12,24 @@ fn format_percentage(part : Int, total : Int) -> String {
   let pct = part.to_double() / total.to_double() * 100.0
   let whole = pct.to_int()
   let frac = ((pct - whole.to_double()) * 100.0).to_int()
-  "\{whole}.\{frac}%"
+  let frac_str = if frac < 10 { "0\{frac}" } else { "\{frac}" }
+  "\{whole}.\{frac_str}%"
 }
 
 ///|
 fn format_rps(rps : Double) -> String {
   let whole = rps.to_int()
   let frac = ((rps - whole.to_double()) * 100.0).to_int()
-  "\{whole}.\{frac}"
+  let frac_str = if frac < 10 { "0\{frac}" } else { "\{frac}" }
+  "\{whole}.\{frac_str}"
 }
 
 ///|
 fn format_time(ms : Double) -> String {
   let whole = (ms / 1000.0).to_int()
   let frac = (ms % 1000.0 / 10.0).to_int()
-  "\{whole}.\{frac}s"
+  let frac_str = if frac < 10 { "0\{frac}" } else { "\{frac}" }
+  "\{whole}.\{frac_str}s"
 }
 
 ///|

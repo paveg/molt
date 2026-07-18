@@ -107,7 +107,7 @@ test "report_text with no errors omits errors section" {
   )
   let output = @reporter.report_text(stats)
   inspect(output.contains("Errors"), content="false")
-  inspect(output.contains("Successful:        100 (100.0%)"), content="true")
+  inspect(output.contains("Successful:        100 (100.00%)"), content="true")
 }
 
 ///|
