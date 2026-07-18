@@ -61,6 +61,7 @@ fn make_config(
     error_threshold_pct,
     warm_up_ms: 0,
     insecure: false,
+    cacert: None,
     disable_keepalive: false,
     debug: false,
     csv_output: false,

@@ -31,11 +31,7 @@ async fn main {
       let (base_url, path) = @worker.parse_url(config.url)
       let client = @http.Client(
         base_url,
-        trust=if config.insecure {
-          @tls.NoVerification
-        } else {
-          @tls.SystemRoot
-        },
+        trust=@worker.trust_from_config(config),
       )
       // Match worker semantics: when compression is off, force identity so
       // the debug output reflects wire bytes rather than decompressed payload.

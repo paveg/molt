@@ -33,6 +33,7 @@ pub(all) struct Config {
   error_threshold_pct : Double?
   warm_up_ms : Int
   insecure : Bool
+  cacert : String?
   disable_keepalive : Bool
   debug : Bool
   csv_output : Bool
@@ -60,6 +61,7 @@ pub fn Config::default_with_url(url : String) -> Config {
     error_threshold_pct: None,
     warm_up_ms: 0,
     insecure: false,
+    cacert: None,
     disable_keepalive: false,
     debug: false,
     csv_output: false,

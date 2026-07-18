@@ -239,6 +239,7 @@ Usage: molt [options] <url>
 | `--redirect` | `-L` | off | Follow 3xx redirects (up to 10 hops) |
 | `--disable-keepalive` | | off | New connection per request |
 | `--insecure` | `-k` | off | Skip TLS certificate verification |
+| `--cacert` | | -- | Custom CA certificate (PEM) for TLS verification |
 | **Output** | | | |
 | `--no-tui` | | off | Plain text with periodic status |
 | `--json` | `-j` | off | JSON output (implies `--no-tui`) |

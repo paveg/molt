@@ -17,6 +17,7 @@ fn test_config(url : String, duration_ms : Int) -> @types.Config {
     error_threshold_pct: None,
     warm_up_ms: 0,
     insecure: false,
+    cacert: None,
     disable_keepalive: false,
     debug: false,
     csv_output: false,

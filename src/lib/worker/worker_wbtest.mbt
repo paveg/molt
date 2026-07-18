@@ -386,3 +386,42 @@ test "classify_error empty string" {
   let err = classify_error("")
   inspect(err is @types.RequestError::Other(_), content="true")
 }
+
+///|
+test "trust_from_config default is system root" {
+  let config = @types.Config::default_with_url("https://example.com")
+  let trust = trust_from_config(config)
+  inspect(trust is @tls.SystemRoot, content="true")
+}
+
+///|
+test "trust_from_config insecure wins over cacert" {
+  let base = @types.Config::default_with_url("https://example.com")
+  let config = { ..base, insecure: true, cacert: Some("/path/ca.pem") }
+  let trust = trust_from_config(config)
+  inspect(trust is @tls.NoVerification, content="true")
+}
+
+///|
+test "trust_from_config cacert without insecure uses custom pem" {
+  let base = @types.Config::default_with_url("https://example.com")
+  let config = { ..base, insecure: false, cacert: Some("/path/ca.pem") }
+  let trust = trust_from_config(config)
+  inspect(trust is @tls.CustomPemFile("/path/ca.pem"), content="true")
+}
+
+///|
+test "trust_from_config no cacert no insecure uses system root" {
+  let base = @types.Config::default_with_url("https://example.com")
+  let config = { ..base, insecure: false, cacert: None }
+  let trust = trust_from_config(config)
+  inspect(trust is @tls.SystemRoot, content="true")
+}
+
+///|
+test "trust_from_config empty string cacert path passed through" {
+  let base = @types.Config::default_with_url("https://example.com")
+  let config = { ..base, insecure: false, cacert: Some("") }
+  let trust = trust_from_config(config)
+  inspect(trust is @tls.CustomPemFile(""), content="true")
+}
