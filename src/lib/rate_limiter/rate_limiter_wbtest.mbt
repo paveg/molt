@@ -68,3 +68,15 @@ test "rate accessor after negative clamp" {
   let rl = RateLimiter::new(-10)
   inspect(rl.rate(), content="1")
 }
+
+///|
+async test "filler task does not block task group termination" {
+  let completed = @async.with_timeout_opt(2000, async fn() {
+    @async.with_task_group(async fn(group) {
+      let rl = RateLimiter::new(100)
+      rl.start(group)
+      rl.acquire()
+    })
+  })
+  inspect(completed is Some(_), content="true")
+}

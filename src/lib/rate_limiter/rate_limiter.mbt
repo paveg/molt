@@ -22,7 +22,7 @@ pub fn RateLimiter::start(
   }
   let interval_ms = if 1000 / self.rate < 1 { 1 } else { 1000 / self.rate }
   let interval_ms_i64 = interval_ms.to_int64()
-  group.spawn_bg(async fn() {
+  group.spawn_bg(no_wait=true, async fn() {
     let start = @async.now()
     let mut token_index : Int64 = 0L
     while true {
