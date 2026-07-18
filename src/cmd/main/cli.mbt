@@ -43,6 +43,11 @@ fn get_flag(matches : @argparse.Matches, key : String) -> Bool {
 
 ///|
 fn parse_args() -> @types.Config raise {
+  parse_args_from(@env.args())
+}
+
+///|
+fn parse_args_from(argv : Array[String]) -> @types.Config raise {
   let cmd = @argparse.Command(
     "molt",
     about="MoonBit HTTP Load Tester",
@@ -136,6 +141,11 @@ fn parse_args() -> @types.Config raise {
         long="serve",
         about="Start built-in test HTTP server (e.g. 127.0.0.1:8080)",
       ),
+      @argparse.OptionArg(
+        "cacert",
+        long="cacert",
+        about="Path to custom CA certificate (PEM) for TLS verification",
+      ),
     ],
     flags=[
       @argparse.FlagArg(
@@ -184,7 +194,6 @@ fn parse_args() -> @types.Config raise {
     ],
     positionals=[@argparse.PositionArg("url", about="Target URL")],
   )
-  let argv = @env.args()
   // argv[0] is the program name; argparse expects only the arguments
   let args = if argv.length() > 1 { argv[1:] } else { [][:] }
   let matches = cmd.parse(argv=args)
@@ -322,6 +331,7 @@ fn parse_args() -> @types.Config raise {
     None => ()
   }
   let insecure = get_flag(matches, "insecure")
+  let cacert = get_option_value_opt(matches, "cacert")
   let disable_keepalive = get_flag(matches, "disable-keepalive")
   let debug = get_flag(matches, "debug")
   let csv_output = get_flag(matches, "csv")
@@ -348,6 +358,7 @@ fn parse_args() -> @types.Config raise {
     error_threshold_pct,
     warm_up_ms,
     insecure,
+    cacert,
     disable_keepalive,
     debug,
     csv_output,

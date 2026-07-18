@@ -52,6 +52,21 @@ fn build_headers(
 }
 
 ///|
+/// Resolves the TLS trust root from config. `--insecure` wins over
+/// `--cacert`; otherwise a custom CA path is used if set, falling back to
+/// the system trust store.
+pub fn trust_from_config(config : @types.Config) -> @tls.TrustedRoot {
+  if config.insecure {
+    @tls.NoVerification
+  } else {
+    match config.cacert {
+      Some(path) => @tls.CustomPemFile(path)
+      None => @tls.SystemRoot
+    }
+  }
+}
+
+///|
 fn classify_error(msg : String) -> @types.RequestError {
   let lower = msg.to_lower()
   if lower.contains("timeout") {
@@ -153,11 +168,7 @@ pub async fn run(
   num_workers? : Int = 1,
 ) -> Unit {
   let (base_url, path) = parse_url(config.url)
-  let trust : @tls.TrustedRoot = if config.insecure {
-    @tls.NoVerification
-  } else {
-    @tls.SystemRoot
-  }
+  let trust = trust_from_config(config)
   let mut client = @http.Client(base_url, trust~) catch {
     err => {
       on_result(make_error_result(0L, classify_error(err.to_string()), 0L))
