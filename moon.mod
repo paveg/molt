@@ -2,7 +2,7 @@ name = "paveg/molt"
 
 // x-release-please-start-version
 
-version = "0.1.9"
+version = "0.1.10"
 
 // x-release-please-end
 

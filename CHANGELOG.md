@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.10](https://github.com/paveg/molt/compare/molt-v0.1.9...molt-v0.1.10) (2026-07-18)
+
+
+### Features
+
+* add --cacert flag for custom CA verification ([#24](https://github.com/paveg/molt/issues/24)) ([f869166](https://github.com/paveg/molt/commit/f86916607e52faef9dbaea89199e119db5825805))
+* print partial report and exit 130 on SIGINT ([#25](https://github.com/paveg/molt/issues/25)) ([8b98e38](https://github.com/paveg/molt/commit/8b98e38d885a193354b908344f77d9406aa08440))
+* update to MoonBit v0.10.4 / async 0.20.2 and lift the 1000 req/s rate cap ([#20](https://github.com/paveg/molt/issues/20)) ([8fbb433](https://github.com/paveg/molt/commit/8fbb433baf6bc6a2684f091fbf0d800fb6d26b24))
+
+
+### Bug Fixes
+
+* **reporter:** pad fractional part to two digits in number formatting ([#23](https://github.com/paveg/molt/issues/23)) ([e489f8f](https://github.com/paveg/molt/commit/e489f8f66a3d363d58a045778c000a54f2f8767f))
+
 ## [0.1.9](https://github.com/paveg/molt/compare/molt-v0.1.8...molt-v0.1.9) (2026-04-10)
 
 
