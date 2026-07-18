@@ -61,6 +61,8 @@ jobs:
 
       - name: Test (native) with coverage
         run: moon test --target native --enable-coverage
+        env:
+          MOONBIT_ASYNC_CHECK_FD_LEAK: "1"
 
       - name: Generate coverage report
         run: moon coverage report -f coveralls -o codecov.json --send-to codecov
