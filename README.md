@@ -44,7 +44,7 @@ Built entirely in MoonBit using the native backend for direct I/O without WASM o
 
 **CI/CD**
 - SLA thresholds with exit codes (`--latency-threshold`, `--error-threshold`)
-- Exit 0 (success), 1 (config error), 2 (test failures), 3 (threshold violation)
+- Exit 0 (success), 1 (config error), 2 (test failures), 3 (threshold violation), 130 (interrupted; partial stats still reported)
 - Automated releases via release-please
 
 ## Installation
@@ -65,7 +65,7 @@ sudo mv molt /usr/local/bin/
 
 ### Build from source
 
-Requires [MoonBit](https://www.moonbitlang.com/) toolchain.
+Requires [MoonBit](https://www.moonbitlang.com/) toolchain v0.10.4 or later.
 
 ```sh
 git clone https://github.com/paveg/molt.git && cd molt
