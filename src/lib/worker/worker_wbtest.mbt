@@ -73,7 +73,12 @@ test "build_headers empty array" {
   let h = build_headers([], compression=false)
   // compression=false injects Accept-Encoding: identity, so length is 1
   inspect(h.length(), content="1")
-  inspect(h.get("Accept-Encoding"), content="Some(\"identity\")")
+  inspect(
+    h.get("Accept-Encoding"),
+    content=(
+      #|Some(identity)
+    ),
+  )
 }
 
 ///|
@@ -82,7 +87,12 @@ test "build_headers single header" {
     [("Content-Type", "application/json")],
     compression=true,
   )
-  inspect(h.get("Content-Type"), content="Some(\"application/json\")")
+  inspect(
+    h.get("Content-Type"),
+    content=(
+      #|Some(application/json)
+    ),
+  )
 }
 
 ///|
@@ -91,8 +101,18 @@ test "build_headers multiple headers" {
     [("Content-Type", "application/json"), ("Authorization", "Bearer token")],
     compression=true,
   )
-  inspect(h.get("Content-Type"), content="Some(\"application/json\")")
-  inspect(h.get("Authorization"), content="Some(\"Bearer token\")")
+  inspect(
+    h.get("Content-Type"),
+    content=(
+      #|Some(application/json)
+    ),
+  )
+  inspect(
+    h.get("Authorization"),
+    content=(
+      #|Some(Bearer token)
+    ),
+  )
 }
 
 ///|
@@ -101,7 +121,12 @@ test "build_headers duplicate key uses last value" {
     [("X-Key", "first"), ("X-Key", "second")],
     compression=true,
   )
-  inspect(h.get("X-Key"), content="Some(\"second\")")
+  inspect(
+    h.get("X-Key"),
+    content=(
+      #|Some(second)
+    ),
+  )
 }
 
 ///|
@@ -109,7 +134,12 @@ test "build_headers compression off injects identity" {
   // Default load-testing mode: no user headers, compression disabled.
   // We want wire-byte measurements, so force Accept-Encoding: identity.
   let h = build_headers([], compression=false)
-  inspect(h.get("Accept-Encoding"), content="Some(\"identity\")")
+  inspect(
+    h.get("Accept-Encoding"),
+    content=(
+      #|Some(identity)
+    ),
+  )
 }
 
 ///|
@@ -125,7 +155,12 @@ test "build_headers compression off preserves user Accept-Encoding" {
   // User explicitly asked for gzip via -H. Even though compression is off,
   // we must not overwrite the user's choice.
   let h = build_headers([("Accept-Encoding", "gzip")], compression=false)
-  inspect(h.get("Accept-Encoding"), content="Some(\"gzip\")")
+  inspect(
+    h.get("Accept-Encoding"),
+    content=(
+      #|Some(gzip)
+    ),
+  )
 }
 
 ///|
@@ -134,7 +169,12 @@ test "build_headers compression off preserves user lowercase accept-encoding" {
   // by curl/hey; cover common lowercase variant explicitly.
   let h = build_headers([("accept-encoding", "gzip")], compression=false)
   inspect(h.get("Accept-Encoding"), content="None")
-  inspect(h.get("accept-encoding"), content="Some(\"gzip\")")
+  inspect(
+    h.get("accept-encoding"),
+    content=(
+      #|Some(gzip)
+    ),
+  )
 }
 
 ///|
@@ -297,7 +337,12 @@ test "classify_error/ssl_error" {
 ///|
 test "classify_error/other" {
   let err = classify_error("some unknown error")
-  inspect(err, content="Other(\"some unknown error\")")
+  inspect(
+    err,
+    content=(
+      #|Other(some unknown error)
+    ),
+  )
 }
 
 ///|
